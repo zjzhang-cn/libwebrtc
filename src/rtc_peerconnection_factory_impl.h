@@ -9,6 +9,7 @@
 #include "api/media_stream_interface.h"
 #include "api/peer_connection_interface.h"
 #include "rtc_base/thread.h"
+#include "rtc_base/task_queue.h"
 
 namespace libwebrtc {
 
@@ -78,6 +79,7 @@ class RTCPeerConnectionFactoryImpl : public RTCPeerConnectionFactory {
   scoped_refptr<AudioDeviceImpl> audio_device_impl_;
   scoped_refptr<RTCVideoDeviceImpl> video_device_impl_;
   std::list<scoped_refptr<RTCPeerConnection>> peerconnections_;
+  std::unique_ptr<webrtc::TaskQueueFactory> task_queue_factory_;
 };
 
 } // namespace libwebrtc

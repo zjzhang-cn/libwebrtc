@@ -12,9 +12,8 @@
 #include "api/media_stream_interface.h"
 #include "api/video_codecs/builtin_video_decoder_factory.h"
 #include "api/video_codecs/builtin_video_encoder_factory.h"
+#include "api/task_queue/default_task_queue_factory.h"
 #include "modules/audio_device/audio_device_impl.h"
-#include "rtc_base/bind.h"
-
 #if defined(WEBRTC_IOS)
 #include "engine/sdk/objc/Framework/Classes/videotoolboxvideocodecfactory.h"
 #endif
@@ -27,16 +26,15 @@ RTCPeerConnectionFactoryImpl::RTCPeerConnectionFactoryImpl(
     rtc::Thread* network_thread)
     : worker_thread_(worker_thread),
       signaling_thread_(signaling_thread),
-      network_thread_(network_thread) {}
+      network_thread_(network_thread),
+      task_queue_factory_(webrtc::CreateDefaultTaskQueueFactory()) {}
 
 RTCPeerConnectionFactoryImpl::~RTCPeerConnectionFactoryImpl() {}
 
 bool RTCPeerConnectionFactoryImpl::Initialize() {
   if (!audio_device_module_) {
-    worker_thread_->Invoke<void>(
-        RTC_FROM_HERE,
-        rtc::Bind(&RTCPeerConnectionFactoryImpl::CreateAudioDeviceModule_w,
-                  this));
+    worker_thread_->Invoke<void>(RTC_FROM_HERE,
+                                 [this] { CreateAudioDeviceModule_w(); });
   }
 
   if (!rtc_peerconnection_factory_) {
@@ -62,9 +60,7 @@ bool RTCPeerConnectionFactoryImpl::Terminate() {
   rtc_peerconnection_factory_ = NULL;
   if (audio_device_module_) {
     worker_thread_->Invoke<void>(
-        RTC_FROM_HERE,
-        rtc::Bind(&RTCPeerConnectionFactoryImpl::DestroyAudioDeviceModule_w,
-                  this));
+        RTC_FROM_HERE,[this]{ DestroyAudioDeviceModule_w(); });
   }
 
   return true;
@@ -72,7 +68,8 @@ bool RTCPeerConnectionFactoryImpl::Terminate() {
 
 void RTCPeerConnectionFactoryImpl::CreateAudioDeviceModule_w() {
   if (!audio_device_module_)
-    audio_device_module_ = webrtc::AudioDeviceModule::Create(webrtc::AudioDeviceModule::kPlatformDefaultAudio, nullptr);
+    audio_device_module_ = webrtc::AudioDeviceModule::Create(
+        webrtc::AudioDeviceModule::kPlatformDefaultAudio, task_queue_factory_.get());
 }
 
 void RTCPeerConnectionFactoryImpl::DestroyAudioDeviceModule_w() {
@@ -105,9 +102,8 @@ void RTCPeerConnectionFactoryImpl::Delete(
 scoped_refptr<RTCAudioDevice> RTCPeerConnectionFactoryImpl::GetAudioDevice() {
   if (!audio_device_module_) {
     worker_thread_->Invoke<void>(
-        RTC_FROM_HERE,
-        rtc::Bind(&RTCPeerConnectionFactoryImpl::CreateAudioDeviceModule_w,
-                  this));
+        RTC_FROM_HERE,[this]{
+      CreateAudioDeviceModule_w();});
   }
 
   if (!audio_device_impl_)
@@ -142,9 +138,8 @@ scoped_refptr<RTCVideoSource> RTCPeerConnectionFactoryImpl::CreateVideoSource(
   if (rtc::Thread::Current() != signaling_thread_) {
     scoped_refptr<RTCVideoSource> source =
         signaling_thread_->Invoke<scoped_refptr<RTCVideoSource>>(
-            RTC_FROM_HERE,
-            rtc::Bind(&RTCPeerConnectionFactoryImpl::CreateVideoSource_s, this,
-                      capturer, video_source_label, constraints));
+            RTC_FROM_HERE, [this, &capturer, &video_source_label, &constraints] {
+     return CreateVideoSource_s(capturer, video_source_label, constraints); });
     return source;
   }
 

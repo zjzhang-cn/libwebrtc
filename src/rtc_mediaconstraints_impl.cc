@@ -10,8 +10,6 @@ scoped_refptr<RTCMediaConstraints> RTCMediaConstraints::Create() {
 }
 
 const char* RTCMediaConstraints::kGoogEchoCancellation = webrtc::MediaConstraints::kGoogEchoCancellation;
-const char* RTCMediaConstraints::kExtendedFilterEchoCancellation = webrtc::MediaConstraints::kExtendedFilterEchoCancellation;
-const char* RTCMediaConstraints::kDAEchoCancellation = webrtc::MediaConstraints::kDAEchoCancellation;
 const char* RTCMediaConstraints::kAutoGainControl = webrtc::MediaConstraints::kAutoGainControl;
 const char* RTCMediaConstraints::kExperimentalAutoGainControl = webrtc::MediaConstraints::kExperimentalAutoGainControl;
 const char* RTCMediaConstraints::kNoiseSuppression = webrtc::MediaConstraints::kNoiseSuppression;
