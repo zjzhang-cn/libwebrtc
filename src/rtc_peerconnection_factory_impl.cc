@@ -1,19 +1,19 @@
 #include "rtc_peerconnection_factory_impl.h"
+
+#include "api/audio_codecs/builtin_audio_decoder_factory.h"
+#include "api/audio_codecs/builtin_audio_encoder_factory.h"
+#include "api/create_peerconnection_factory.h"
+#include "api/media_stream_interface.h"
+#include "api/task_queue/default_task_queue_factory.h"
+#include "api/video_codecs/builtin_video_decoder_factory.h"
+#include "api/video_codecs/builtin_video_encoder_factory.h"
+#include "modules/audio_device/audio_device_impl.h"
 #include "rtc_audio_source_impl.h"
 #include "rtc_media_stream_impl.h"
 #include "rtc_mediaconstraints_impl.h"
 #include "rtc_peerconnection_impl.h"
 #include "rtc_video_device_impl.h"
 #include "rtc_video_source_impl.h"
-
-#include "api/audio_codecs/builtin_audio_decoder_factory.h"
-#include "api/audio_codecs/builtin_audio_encoder_factory.h"
-#include "api/create_peerconnection_factory.h"
-#include "api/media_stream_interface.h"
-#include "api/video_codecs/builtin_video_decoder_factory.h"
-#include "api/video_codecs/builtin_video_encoder_factory.h"
-#include "api/task_queue/default_task_queue_factory.h"
-#include "modules/audio_device/audio_device_impl.h"
 #if defined(WEBRTC_IOS)
 #include "engine/sdk/objc/Framework/Classes/videotoolboxvideocodecfactory.h"
 #endif
@@ -59,8 +59,8 @@ bool RTCPeerConnectionFactoryImpl::Terminate() {
   video_device_impl_ = nullptr;
   rtc_peerconnection_factory_ = NULL;
   if (audio_device_module_) {
-    worker_thread_->Invoke<void>(
-        RTC_FROM_HERE,[this]{ DestroyAudioDeviceModule_w(); });
+    worker_thread_->Invoke<void>(RTC_FROM_HERE,
+                                 [this] { DestroyAudioDeviceModule_w(); });
   }
 
   return true;
@@ -69,7 +69,8 @@ bool RTCPeerConnectionFactoryImpl::Terminate() {
 void RTCPeerConnectionFactoryImpl::CreateAudioDeviceModule_w() {
   if (!audio_device_module_)
     audio_device_module_ = webrtc::AudioDeviceModule::Create(
-        webrtc::AudioDeviceModule::kPlatformDefaultAudio, task_queue_factory_.get());
+        webrtc::AudioDeviceModule::kPlatformDefaultAudio,
+        task_queue_factory_.get());
 }
 
 void RTCPeerConnectionFactoryImpl::DestroyAudioDeviceModule_w() {
@@ -101,9 +102,8 @@ void RTCPeerConnectionFactoryImpl::Delete(
 
 scoped_refptr<RTCAudioDevice> RTCPeerConnectionFactoryImpl::GetAudioDevice() {
   if (!audio_device_module_) {
-    worker_thread_->Invoke<void>(
-        RTC_FROM_HERE,[this]{
-      CreateAudioDeviceModule_w();});
+    worker_thread_->Invoke<void>(RTC_FROM_HERE,
+                                 [this] { CreateAudioDeviceModule_w(); });
   }
 
   if (!audio_device_impl_)
@@ -138,8 +138,11 @@ scoped_refptr<RTCVideoSource> RTCPeerConnectionFactoryImpl::CreateVideoSource(
   if (rtc::Thread::Current() != signaling_thread_) {
     scoped_refptr<RTCVideoSource> source =
         signaling_thread_->Invoke<scoped_refptr<RTCVideoSource>>(
-            RTC_FROM_HERE, [this, &capturer, &video_source_label, &constraints] {
-     return CreateVideoSource_s(capturer, video_source_label, constraints); });
+            RTC_FROM_HERE,
+            [this, &capturer, &video_source_label, &constraints] {
+              return CreateVideoSource_s(capturer, video_source_label,
+                                         constraints);
+            });
     return source;
   }
 
@@ -155,7 +158,8 @@ scoped_refptr<RTCVideoSource> RTCPeerConnectionFactoryImpl::CreateVideoSource_s(
   /*RTCMediaConstraintsImpl* media_constraints =
           static_cast<RTCMediaConstraintsImpl*>(constraints.get());*/
   rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> rtc_source_track =
-  new rtc::RefCountedObject<webrtc::internal::CapturerTrackSource>(capturer_impl->video_capturer());
+      new rtc::RefCountedObject<webrtc::internal::CapturerTrackSource>(
+          capturer_impl->video_capturer());
   scoped_refptr<RTCVideoSourceImpl> source = scoped_refptr<RTCVideoSourceImpl>(
       new RefCountedObject<RTCVideoSourceImpl>(rtc_source_track));
   return source;
@@ -212,4 +216,4 @@ scoped_refptr<RTCAudioTrack> RTCPeerConnectionFactoryImpl::CreateAudioTrack(
   return track;
 }
 
-} // namespace libwebrtc
+}  // namespace libwebrtc

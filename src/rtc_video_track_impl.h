@@ -1,13 +1,12 @@
 #ifndef LIB_WEBRTC_VIDEO_TRACK_IMPL_HXX
 #define LIB_WEBRTC_VIDEO_TRACK_IMPL_HXX
 
+#include "api/media_stream_interface.h"
+#include "modules/video_capture/video_capture_factory.h"
 #include "rtc_types.h"
 #include "rtc_video_sink_adapter.h"
 #include "rtc_video_source_impl.h"
 #include "rtc_video_track.h"
-
-#include "api/media_stream_interface.h"
-#include "modules/video_capture/video_capture_factory.h"
 
 namespace libwebrtc {
 
@@ -25,13 +24,9 @@ class VideoTrackImpl : public RTCVideoTrack {
   virtual void RemoveRenderer(
       RTCVideoRenderer<scoped_refptr<RTCVideoFrame>>* renderer) override;
 
-  virtual const char* kind() const override {
-    return kind_;
-  }
+  virtual const char* kind() const override { return kind_; }
 
-  virtual const char* id() const override { 
-      return id_;
-  }
+  virtual const char* id() const override { return id_; }
 
   virtual bool enabled() const override { return rtc_track_->enabled(); }
 
@@ -50,6 +45,6 @@ class VideoTrackImpl : public RTCVideoTrack {
   char id_[kMaxStringLength], kind_[kShortStringLength];
 };
 
-} // namespace libwebrtc
+}  // namespace libwebrtc
 
 #endif  // LIB_WEBRTC_VIDEO_TRACK_IMPL_HXX

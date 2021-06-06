@@ -4,7 +4,6 @@
 #include "api/media_stream_interface.h"
 #include "api/peer_connection_interface.h"
 #include "api/stats_types.h"
-
 #include "rtc_media_stream.h"
 #include "rtc_peerconnection.h"
 
@@ -62,9 +61,7 @@ class MediaStreamImpl : public RTCMediaStream,
   virtual scoped_refptr<RTCVideoTrack> FindVideoTrack(
       const char* track_id) override;
 
-  virtual const char* label() override {
-    return label_;
-  }
+  virtual const char* label() override { return label_; }
 
   virtual void OnChanged() override;
 
@@ -86,5 +83,5 @@ class MediaStreamImpl : public RTCMediaStream,
   char label_[kMaxStringLength];
 };
 
-} // namespace libwebrtc
+}  // namespace libwebrtc
 #endif  //! LIB_WEBRTC_MEDIA_STREAM_IMPL_HXX

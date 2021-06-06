@@ -2,7 +2,6 @@
 #define LIB_WEBRTC_RTC_MEDIA_CONSTRAINTS_IMPL_HXX
 
 #include "rtc_mediaconstraints.h"
-
 #include "sdk/media_constraints.h"
 
 namespace libwebrtc {
@@ -25,6 +24,6 @@ class RTCMediaConstraintsImpl : public RTCMediaConstraints,
   webrtc::MediaConstraints::Constraints optional_;
 };
 
-} // namespace libwebrtc
+}  // namespace libwebrtc
 
 #endif  // LIB_WEBRTC_RTC_MEDIA_CONSTRAINTS_IMPL_HXX

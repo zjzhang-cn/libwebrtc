@@ -1,7 +1,7 @@
 #include "rtc_video_track_impl.h"
-#include "rtc_media_stream_impl.h"
 
 #include "rtc_base/logging.h"
+#include "rtc_media_stream_impl.h"
 
 namespace libwebrtc {
 
@@ -28,4 +28,4 @@ void VideoTrackImpl::RemoveRenderer(
   return video_sink_->RemoveRenderer(renderer);
 }
 
-} // namespace libwebrtc
+}  // namespace libwebrtc

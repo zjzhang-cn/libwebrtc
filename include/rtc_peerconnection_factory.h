@@ -1,14 +1,13 @@
 #ifndef LIB_WEBRTC_RTC_PEERCONNECTION_FACTORY_HXX
 #define LIB_WEBRTC_RTC_PEERCONNECTION_FACTORY_HXX
 
-#include "rtc_types.h"
-
 #include "rtc_audio_source.h"
 #include "rtc_audio_track.h"
 #include "rtc_media_stream.h"
 #include "rtc_mediaconstraints.h"
-#include "rtc_video_source.h"
+#include "rtc_types.h"
 #include "rtc_video_device.h"
+#include "rtc_video_source.h"
 
 namespace libwebrtc {
 
@@ -51,6 +50,6 @@ class RTCPeerConnectionFactory : public RefCountInterface {
   virtual scoped_refptr<RTCMediaStream> CreateStream(const char* stream_id) = 0;
 };
 
-} // namespace libwebrtc
+}  // namespace libwebrtc
 
 #endif  // LIB_WEBRTC_RTC_PEERCONNECTION_FACTORY_HXX

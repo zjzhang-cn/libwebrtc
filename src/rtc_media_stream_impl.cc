@@ -1,9 +1,9 @@
 ﻿#include "rtc_media_stream_impl.h"
+#include <algorithm>
+
 #include "rtc_audio_track_impl.h"
 #include "rtc_peerconnection.h"
 #include "rtc_video_track_impl.h"
-
-#include <algorithm>
 
 namespace libwebrtc {
 
@@ -150,4 +150,4 @@ void MediaStreamImpl::OnChanged() {
   video_tracks_ = video_tracks;
 }
 
-} // namespace libwebrtc
+}  // namespace libwebrtc

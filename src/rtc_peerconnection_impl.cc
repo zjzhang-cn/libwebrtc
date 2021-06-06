@@ -1,16 +1,17 @@
 #include "rtc_peerconnection_impl.h"
-#include "rtc_data_channel_impl.h"
-#include "rtc_ice_candidate_impl.h"
-#include "rtc_media_stream_impl.h"
-#include "rtc_mediaconstraints_impl.h"
-#include "api/data_channel_interface.h"
-#include "base/callback_forward.h"
-#include "pc/media_session.h"
-#include "rtc_base/logging.h"
 
 #include <functional>
 #include <utility>
 #include <vector>
+
+#include "api/data_channel_interface.h"
+#include "base/callback_forward.h"
+#include "pc/media_session.h"
+#include "rtc_base/logging.h"
+#include "rtc_data_channel_impl.h"
+#include "rtc_ice_candidate_impl.h"
+#include "rtc_media_stream_impl.h"
+#include "rtc_mediaconstraints_impl.h"
 
 using rtc::Thread;
 
@@ -100,7 +101,6 @@ static std::map<webrtc::PeerConnectionInterface::SignalingState,
          libwebrtc::RTCSignalingState::RTCSignalingStateHaveRemotePrAnswer},
         {webrtc::PeerConnectionInterface::kClosed,
          libwebrtc::RTCSignalingState::RTCSignalingStateClosed}};
-
 
 namespace libwebrtc {
 class SetSessionDescriptionObserverProxy
@@ -248,7 +248,7 @@ void RTCPeerConnectionImpl::OnDataChannel(
 
 void RTCPeerConnectionImpl::OnIceGatheringChange(
     webrtc::PeerConnectionInterface::IceGatheringState new_state) {
-   if (observer_)
+  if (observer_)
     observer_->OnIceGatheringState(ice_gathering_state_map[new_state]);
 }
 
@@ -440,8 +440,7 @@ void RTCPeerConnectionImpl::SetRemoteDescription(const char* sdp,
       session_description->description()->GetContentDescriptionByName("video");
 
   if (content_desc && configuration_.local_video_bandwidth > 0)
-    content_desc->set_bandwidth(configuration_.local_video_bandwidth *
-                                      1000);
+    content_desc->set_bandwidth(configuration_.local_video_bandwidth * 1000);
 
   rtc_peerconnection_->SetRemoteDescription(
       SetSessionDescriptionObserverProxy::Create(success, failure),
@@ -463,9 +462,8 @@ void RTCPeerConnectionImpl::CreateOffer(
   RTCMediaConstraintsImpl* media_constraints =
       static_cast<RTCMediaConstraintsImpl*>(constraints.get());
   webrtc::PeerConnectionInterface::RTCOfferAnswerOptions offer_answer_options;
-  if (CopyConstraintsIntoOfferAnswerOptions(
-          media_constraints, &offer_answer_options) ==
-      false) {
+  if (CopyConstraintsIntoOfferAnswerOptions(media_constraints,
+                                            &offer_answer_options) == false) {
     offer_answer_options = offer_answer_options_;
   }
 
@@ -486,9 +484,8 @@ void RTCPeerConnectionImpl::CreateAnswer(
   RTCMediaConstraintsImpl* media_constraints =
       static_cast<RTCMediaConstraintsImpl*>(constraints.get());
   webrtc::PeerConnectionInterface::RTCOfferAnswerOptions offer_answer_options;
-  if (CopyConstraintsIntoOfferAnswerOptions(
-          media_constraints, &offer_answer_options) ==
-      false) {
+  if (CopyConstraintsIntoOfferAnswerOptions(media_constraints,
+                                            &offer_answer_options) == false) {
     offer_answer_options = offer_answer_options_;
   }
   rtc_peerconnection_->CreateAnswer(
@@ -660,4 +657,4 @@ void WebRTCStatsObserver::OnComplete(const webrtc::StatsReports& reports) {
   this->Release();
 }
 
-} // namespace libwebrtc
+}  // namespace libwebrtc

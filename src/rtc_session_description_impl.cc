@@ -14,7 +14,8 @@ scoped_refptr<RTCSessionDescription> CreateRTCSessionDescription(
   strncpy(error->line, sdp_error.line.c_str(), sdp_error.line.size());
   scoped_refptr<RTCSessionDescriptionImpl> session_description =
       scoped_refptr<RTCSessionDescriptionImpl>(
-          new RefCountedObject<RTCSessionDescriptionImpl>(std::move(rtc_description)));
+          new RefCountedObject<RTCSessionDescriptionImpl>(
+              std::move(rtc_description)));
   return session_description;
 }
 
@@ -31,7 +32,7 @@ RTCSessionDescription::SdpType RTCSessionDescriptionImpl::GetType() {
   return (RTCSessionDescription::SdpType)description_->GetType();
 }
 
-const char* RTCSessionDescriptionImpl::type(){
+const char* RTCSessionDescriptionImpl::type() {
   type_ = description_->type();
   return type_.c_str();
 }
@@ -45,4 +46,4 @@ bool RTCSessionDescriptionImpl::ToString(char* out, int length) {
   return false;
 }
 
-} // namespace libwebrtc
+}  // namespace libwebrtc

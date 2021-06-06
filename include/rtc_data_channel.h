@@ -34,7 +34,7 @@ class RTCDataChannelObserver {
 
 class RTCDataChannel : public RefCountInterface {
  public:
-  virtual void Send(const char *data, int length, bool binary = false) = 0;
+  virtual void Send(const char* data, int length, bool binary = false) = 0;
 
   virtual void Close() = 0;
 
@@ -52,6 +52,6 @@ class RTCDataChannel : public RefCountInterface {
   virtual ~RTCDataChannel() {}
 };
 
-} // namespace libwebrtc
+}  // namespace libwebrtc
 
 #endif  // LIB_WEBRTC_RTC_DATA_CHANNEL_HXX

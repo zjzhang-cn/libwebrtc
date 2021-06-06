@@ -1,15 +1,15 @@
 #ifndef LIB_WEBRTC_RTC_DATA_CHANNEL_IMPL_HXX
 #define LIB_WEBRTC_RTC_DATA_CHANNEL_IMPL_HXX
 
+#include "api/data_channel_interface.h"
+#include "rtc_base/synchronization/mutex.h"
 #include "rtc_data_channel.h"
 #include "rtc_types.h"
 
-#include "api/data_channel_interface.h"
-#include "rtc_base/synchronization/mutex.h"
-
 namespace libwebrtc {
 
-class RTCDataChannelImpl : public RTCDataChannel, public webrtc::DataChannelObserver {
+class RTCDataChannelImpl : public RTCDataChannel,
+                           public webrtc::DataChannelObserver {
  public:
   RTCDataChannelImpl(
       rtc::scoped_refptr<webrtc::DataChannelInterface> rtc_data_channel);
@@ -45,6 +45,6 @@ class RTCDataChannelImpl : public RTCDataChannel, public webrtc::DataChannelObse
   char label_[kMaxStringLength];
 };
 
-} // namespace libwebrtc
+}  // namespace libwebrtc
 
 #endif  // !LIB_WEBRTC_RTC_DATA_CHANNEL_IMPL_HXX

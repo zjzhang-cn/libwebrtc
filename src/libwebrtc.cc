@@ -3,7 +3,6 @@
 #include "api/scoped_refptr.h"
 #include "rtc_base/ssl_adapter.h"
 #include "rtc_base/thread.h"
-
 #include "rtc_peerconnection_factory_impl.h"
 
 namespace libwebrtc {
@@ -14,7 +13,6 @@ std::unique_ptr<rtc::Thread> signaling_thread;
 std::unique_ptr<rtc::Thread> network_thread;
 
 bool LibWebRTC::Initialize() {
- 
   if (!g_is_initialized) {
     rtc::InitializeSSL();
     g_is_initialized = true;
@@ -67,9 +65,10 @@ LibWebRTC::CreateRTCPeerConnectionFactory() {
   scoped_refptr<RTCPeerConnectionFactory> rtc_peerconnection_factory =
       scoped_refptr<RTCPeerConnectionFactory>(
           new RefCountedObject<RTCPeerConnectionFactoryImpl>(
-              worker_thread.get(), signaling_thread.get(), network_thread.get()));
+              worker_thread.get(), signaling_thread.get(),
+              network_thread.get()));
   rtc_peerconnection_factory->Initialize();
   return rtc_peerconnection_factory;
 }
 
-} // namespace libwebrtc
+}  // namespace libwebrtc

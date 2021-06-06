@@ -4,14 +4,13 @@ namespace libwebrtc {
 
 RTCDataChannelImpl::RTCDataChannelImpl(
     rtc::scoped_refptr<webrtc::DataChannelInterface> rtc_data_channel)
-    : rtc_data_channel_(rtc_data_channel),
-      mutex_(new webrtc::Mutex()) {
+    : rtc_data_channel_(rtc_data_channel), mutex_(new webrtc::Mutex()) {
   rtc_data_channel_->RegisterObserver(this);
   strncpy(label_, rtc_data_channel_->label().data(), sizeof(label_));
 }
 
 void RTCDataChannelImpl::Send(const char* data,
-	int length,
+                              int length,
                               bool binary /*= false*/) {
   if (binary) {
     rtc::CopyOnWriteBuffer binary(data);
@@ -75,7 +74,8 @@ RTCDataChannelState RTCDataChannelImpl::state() {
 
 void RTCDataChannelImpl::OnMessage(const webrtc::DataBuffer& buffer) {
   if (observer_)
-    observer_->OnMessage(buffer.data.data<char>(), buffer.data.size(), buffer.binary);
- }
+    observer_->OnMessage(buffer.data.data<char>(), buffer.data.size(),
+                         buffer.binary);
+}
 
-} // namespace libwebrtc
+}  // namespace libwebrtc

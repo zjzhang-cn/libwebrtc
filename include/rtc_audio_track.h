@@ -1,8 +1,8 @@
 #ifndef LIB_WEBRTC_RTC_AUDIO_TRACK_HXX
 #define LIB_WEBRTC_RTC_AUDIO_TRACK_HXX
 
-#include "rtc_types.h"
 #include "rtc_media_track.h"
+#include "rtc_types.h"
 
 namespace libwebrtc {
 
@@ -11,6 +11,6 @@ class RTCAudioTrack : public RTCMediaTrack {
   virtual ~RTCAudioTrack() {}
 };
 
-} // namespace libwebrtc
+}  // namespace libwebrtc
 
-#endif //LIB_WEBRTC_RTC_AUDIO_TRACK_HXX
+#endif  // LIB_WEBRTC_RTC_AUDIO_TRACK_HXX

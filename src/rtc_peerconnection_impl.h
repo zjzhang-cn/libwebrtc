@@ -1,28 +1,26 @@
 #ifndef LIB_WEBRTC_MEDIA_SESSION_IMPL_HXX
 #define LIB_WEBRTC_MEDIA_SESSION_IMPL_HXX
 
+#include <deque>
+#include <map>
+#include <set>
+#include <string>
+
+#include "api/data_channel_interface.h"
+#include "api/media_stream_interface.h"
+#include "api/peer_connection_interface.h"
+#include "api/peer_connection_proxy.h"
+#include "api/scoped_refptr.h"
+#include "modules/video_capture/video_capture.h"
 #include "rtc_audio_track_impl.h"
+#include "rtc_base/synchronization/mutex.h"
 #include "rtc_peerconnection.h"
 #include "rtc_peerconnection_factory.h"
 #include "rtc_video_sink_adapter.h"
 #include "rtc_video_source.h"
 #include "rtc_video_source_impl.h"
 #include "rtc_video_track_impl.h"
-
-#include "api/data_channel_interface.h"
-#include "api/media_stream_interface.h"
-#include "api/peer_connection_interface.h"
-#include "api/peer_connection_proxy.h"
-
 #include "src/internal/video_capturer.h"
-#include "modules/video_capture/video_capture.h"
-#include "rtc_base/synchronization/mutex.h"
-#include "api/scoped_refptr.h"
-
-#include <deque>
-#include <map>
-#include <set>
-#include <string>
 
 namespace webrtc {
 class VideoCaptureModule;
@@ -81,7 +79,7 @@ class RTCPeerConnectionImpl : public RTCPeerConnection,
 
   virtual scoped_refptr<RTCDataChannel> CreateDataChannel(
       const char* label,
-      const RTCDataChannelInit *dataChannelDict) override;
+      const RTCDataChannelInit* dataChannelDict) override;
 
   virtual bool GetStats(const RTCAudioTrack* track,
                         scoped_refptr<TrackStatsObserver> observer) override;
@@ -140,6 +138,6 @@ class RTCPeerConnectionImpl : public RTCPeerConnection,
   scoped_refptr<RTCDataChannel> data_channel_;
 };
 
-} // namespace libwebrtc
+}  // namespace libwebrtc
 
 #endif  // LIB_WEBRTC_MEDIA_SESSION_IMPL_HXX

@@ -1,15 +1,14 @@
 #ifndef LIB_WEBRTC_MEDIA_SESSION_FACTORY_IMPL_HXX
 #define LIB_WEBRTC_MEDIA_SESSION_FACTORY_IMPL_HXX
 
+#include "api/media_stream_interface.h"
+#include "api/peer_connection_interface.h"
 #include "rtc_audio_device_impl.h"
+#include "rtc_base/task_queue.h"
+#include "rtc_base/thread.h"
 #include "rtc_peerconnection.h"
 #include "rtc_peerconnection_factory.h"
 #include "rtc_video_device_impl.h"
-
-#include "api/media_stream_interface.h"
-#include "api/peer_connection_interface.h"
-#include "rtc_base/thread.h"
-#include "rtc_base/task_queue.h"
 
 namespace libwebrtc {
 
@@ -82,6 +81,6 @@ class RTCPeerConnectionFactoryImpl : public RTCPeerConnectionFactory {
   std::unique_ptr<webrtc::TaskQueueFactory> task_queue_factory_;
 };
 
-} // namespace libwebrtc
+}  // namespace libwebrtc
 
 #endif  // LIB_WEBRTC_MEDIA_SESSION_FACTORY_IMPL_HXX
