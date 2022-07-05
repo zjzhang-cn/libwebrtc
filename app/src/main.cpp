@@ -88,7 +88,7 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
     printf("==%s==>OnAddStream Audio %lu\r\n", tags_.c_string(), audio.size());
     for (scoped_refptr<RTCVideoTrack> track : video.std_vector()) {
       printf("==%s==>OnAddStream RTCVideoTrack %s\r\n", tags_.c_string(), track->id().c_string());
-      track->AddRenderer(new RTCVideoRendererImpl(tags_));
+      track->AddRenderer(new RTCVideoRendererImpl(tags_.std_string()+" "+ track->id().std_string()));
     }
     for (scoped_refptr<RTCAudioTrack> track : audio.std_vector()) {
       printf("==%s==>OnAddStream RTCAudioTrack %s\r\n", tags_.c_string(), track->id().c_string());
@@ -128,7 +128,7 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
   };
 };
 
-const RTCConfiguration config_;
+RTCConfiguration config_;
 
 typedef void (RTCPeerConnection::*CreateFn) (
     OnSdpCreateSuccess,
@@ -210,6 +210,7 @@ int waitGetDescription(scoped_refptr<RTCPeerConnection> pc,GetLocalFn fn,string 
 
 int main() {
   LibWebRTC::Initialize();
+  config_.sdp_semantics = SdpSemantics::kUnifiedPlan;
   scoped_refptr<RTCPeerConnectionFactory> pcFactory = LibWebRTC::CreateRTCPeerConnectionFactory();
   pcFactory->Initialize();
   //屏幕设备测试
@@ -229,9 +230,9 @@ int main() {
   auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 1280, 720, 30);
   auto constraints = RTCMediaConstraints::Create();
   auto video_source_ = pcFactory->CreateVideoSource(video_caputer_, "Test", constraints);
-  auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test");
+  // auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
 
-  video_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
+  // video_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
 
   //音频设备测试
   auto audio_device_ = pcFactory->GetAudioDevice();
@@ -256,16 +257,25 @@ int main() {
   auto pc_receiver = pcFactory->Create(config_, pc_mc);
   // TODO 后续使用AddTransceiver代理AddStream
 
-  auto stream_ = pcFactory->CreateStream("Test");
+  // auto stream_ = pcFactory->CreateStream("Test");
   //流里面添加Track
-  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
-  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"));
-  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"));
-  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"));
-  stream_->AddTrack(video_track_);
+  // stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
+  // stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"));
+  // stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"));
+  // stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"));
+  // stream_->AddTrack(video_track_);
   // pc中添加流
-  pc_sender->AddStream(stream_);
-  pc_receiver->AddStream(stream_);
+  // pc_sender->AddStream(stream_);
+  // pc_receiver->AddStream(stream_);
+  // vector<string> streamid ={string("Test")};
+  std::vector<std::string> stream_ids;
+  stream_ids.push_back("Test");
+  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
+  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"),stream_ids);
+  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"),stream_ids);
+  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"),stream_ids);
+  pc_sender->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),stream_ids);
+  pc_sender->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),stream_ids);
   //设置状态回调
   pc_receiver->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("answer", pc_sender));
   pc_sender->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("offer", pc_receiver));
@@ -275,35 +285,52 @@ int main() {
   ret=waitCreateDescription(pc_sender,&RTCPeerConnection::CreateOffer, pc_mc, sdp,type,error);
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
+  }else{
+    printf("=== CreateOffer ===\r\n%s",sdp.c_string());
   }
   ret=waitSetDescription(pc_sender,&RTCPeerConnection::SetLocalDescription,sdp,type,error);
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
+  }else{
+    printf("=== SetLocalDescription ===\r\n");
   }
   ret=waitGetDescription(pc_sender,&RTCPeerConnection::GetLocalDescription,sdp,type,error);
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
+  }else{
+    printf("=== GetLocalDescription ===\r\n");
   }
   ret=waitSetDescription(pc_receiver,&RTCPeerConnection::SetRemoteDescription,sdp,type,error);
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
+  }else{
+    printf("=== SetRemoteDescription ===\r\n");
   }
   ret=waitCreateDescription(pc_receiver,&RTCPeerConnection::CreateAnswer, pc_mc, sdp,type,error);
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
+  }else{
+    printf("=== CreateAnswer ===\r\n");
   }
   ret=waitSetDescription(pc_receiver,&RTCPeerConnection::SetLocalDescription,sdp,type,error);  
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
+  }else{
+    printf("=== SetLocalDescription ===\r\n");
   }
   ret=waitGetDescription(pc_receiver,&RTCPeerConnection::GetLocalDescription,sdp,type,error);  
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
+  }else{
+    printf("=== GetLocalDescription ===\r\n");
   }
   ret=waitSetDescription(pc_sender,&RTCPeerConnection::SetRemoteDescription,sdp,type,error);
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
+  }else{
+    printf("=== SetRemoteDescription ===\r\n");
   }
+  pc_sender->RestartIce();
   getchar();
   pc_sender->Close();
   pc_receiver->Close();
