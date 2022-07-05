@@ -249,8 +249,11 @@ int main() {
   auto audio_source_ = pcFactory->CreateAudioSource("Test");
   auto audio_track_ = pcFactory->CreateAudioTrack(audio_source_, "Audio_Test");
 
-  auto pc_sender = pcFactory->Create(config_, RTCMediaConstraints::Create());
-  auto pc_receiver = pcFactory->Create(config_, RTCMediaConstraints::Create());
+  auto pc_mc = RTCMediaConstraints::Create();
+  pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kEnableIPv6,"false");
+  pc_mc->AddOptionalConstraint(RTCMediaConstraints::kEnableIPv6,"false");
+  auto pc_sender = pcFactory->Create(config_, pc_mc);
+  auto pc_receiver = pcFactory->Create(config_, pc_mc);
   // TODO 后续使用AddTransceiver代理AddStream
 
   auto stream_ = pcFactory->CreateStream("Test");
@@ -262,12 +265,12 @@ int main() {
   stream_->AddTrack(video_track_);
   // pc中添加流
   pc_sender->AddStream(stream_);
-  // pc_receiver->AddStream(stream_);
+  pc_receiver->AddStream(stream_);
   //设置状态回调
   pc_receiver->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("answer", pc_sender));
   pc_sender->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("offer", pc_receiver));
   string sdp,type,error;
-  auto pc_mc = RTCMediaConstraints::Create();
+
   int ret=0;
   ret=waitCreateDescription(pc_sender,&RTCPeerConnection::CreateOffer, pc_mc, sdp,type,error);
   if (ret<0){
