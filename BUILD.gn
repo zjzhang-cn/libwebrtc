@@ -150,7 +150,6 @@ rtc_shared_library("libwebrtc"){
   defines = [ 
     "USE_LIBYUV",
     "WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE",
-    "USE_INTEL_MEDIA_SDK",
   ]
 
   if(is_win) {
