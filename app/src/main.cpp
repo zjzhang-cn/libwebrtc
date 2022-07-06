@@ -23,7 +23,7 @@
 #include "rtc_video_device.h"
 #include "rtc_video_frame.h"
 #include "rtc_video_renderer.h"
-
+#include <unistd.h>
 using namespace libwebrtc;
 
 
@@ -53,6 +53,19 @@ class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame
   int seq_;
   string tag_;
 };
+
+class RTCDataChannelObserverImpl : public RTCDataChannelObserver {
+  public:  
+  virtual void OnStateChange(RTCDataChannelState state){};
+  virtual void OnMessage(const char* buffer, int length, bool binary){};
+};
+
+// class TrackStatsObserverImpl : public TrackStatsObserver{
+//   public:
+//   void OnComplete(const MediaTrackStatistics& reports){
+//     std::cout<<"bytes_received "<<reports.bytes_received<<std::endl;
+//   };
+// };
 
 class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
   scoped_refptr<RTCPeerConnection> pc_;
@@ -299,12 +312,12 @@ int main() {
   std::vector<scoped_refptr<RTCRtpEncodingParameters>> encodings;
   encodings.push_back(encoding);
   auto init=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids,encodings);
-  //pc_sender->AddTransceiver(RTCMediaType::VIDEO,init);
   auto trans = pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),init);
+  pc_sender->AddTransceiver(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
   // auto trans = pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"));  
   //pc_receiver->AddTransceiver(RTCMediaType::VIDEO);
   pc_receiver->AddTransceiver(RTCMediaType::VIDEO);
-
+  pc_receiver->AddTransceiver(RTCMediaType::AUDIO);
   // 3.使用AddTrack方式添加媒体
 #if 0
   std::vector<std::string> stream_ids({"Test"});
@@ -397,7 +410,6 @@ int main() {
 
 
   // pc_sender->RestartIce();
-
   getchar();
   pc_sender->Close();
   pc_receiver->Close();
