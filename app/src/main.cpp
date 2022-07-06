@@ -56,27 +56,27 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
   RTCPeerConnectionObserverImpl(string tags, scoped_refptr<RTCPeerConnection> pc)
       : pc_(pc), tags_(tags){};
   virtual void OnSignalingState(RTCSignalingState state) {
-    printf("==%s==>OnSignalingState %d\r\n", tags_.c_string(), state);
+    printf("==%s==>\tOnSignalingState %d\r\n", tags_.c_string(), state);
     fflush(stdout);
   };
 
   virtual void OnPeerConnectionState(RTCPeerConnectionState state) {
-    printf("==%s==>OnPeerConnectionState %d\r\n", tags_.c_string(), state);
+    printf("==%s==>\tOnPeerConnectionState %d\r\n", tags_.c_string(), state);
     fflush(stdout);
   };
 
   virtual void OnIceGatheringState(RTCIceGatheringState state) {
-    printf("==%s==>OnIceGatheringState %d\r\n", tags_.c_string(), state);
+    printf("==%s==>\tOnIceGatheringState %d\r\n", tags_.c_string(), state);
     fflush(stdout);
   };
 
   virtual void OnIceConnectionState(RTCIceConnectionState state) {
-    printf("==%s==>OnIceConnectionState %d\r\n", tags_.c_string(), state);
+    printf("==%s==>\tOnIceConnectionState %d\r\n", tags_.c_string(), state);
     fflush(stdout);
   };
 
   virtual void OnIceCandidate(scoped_refptr<RTCIceCandidate> candidate) {
-    printf("==%s==>OnIceCandidate %s\r\n", tags_.c_string(), candidate->candidate().c_string());
+    printf("==%s==>\tOnIceCandidate %s\r\n", tags_.c_string(), candidate->candidate().c_string());
     pc_->AddCandidate(candidate->sdp_mid(), candidate->sdp_mline_index(), candidate->candidate());
     fflush(stdout);
   };
@@ -84,14 +84,14 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
   virtual void OnAddStream(scoped_refptr<RTCMediaStream> stream) {
     auto video = stream->video_tracks();
     auto audio = stream->audio_tracks();
-    printf("==%s==>OnAddStream Video %lu\r\n", tags_.c_string(), video.size());
-    printf("==%s==>OnAddStream Audio %lu\r\n", tags_.c_string(), audio.size());
+    printf("==%s==>\tOnAddStream Video %lu\r\n", tags_.c_string(), video.size());
+    printf("==%s==>\tOnAddStream Audio %lu\r\n", tags_.c_string(), audio.size());
     for (scoped_refptr<RTCVideoTrack> track : video.std_vector()) {
-      printf("==%s==>OnAddStream RTCVideoTrack %s\r\n", tags_.c_string(), track->id().c_string());
-      track->AddRenderer(new RTCVideoRendererImpl(tags_.std_string()+" "+ track->id().std_string()));
+      printf("==%s==>\tOnAddStream RTCVideoTrack %s\r\n", tags_.c_string(), track->id().c_string());
+      track->AddRenderer(new RTCVideoRendererImpl(tags_.std_string()+"\t"+ track->id().std_string()));
     }
     for (scoped_refptr<RTCAudioTrack> track : audio.std_vector()) {
-      printf("==%s==>OnAddStream RTCAudioTrack %s\r\n", tags_.c_string(), track->id().c_string());
+      printf("==%s==>\tOnAddStream RTCAudioTrack %s\r\n", tags_.c_string(), track->id().c_string());
     }
     fflush(stdout);
   };
@@ -102,28 +102,28 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
   };
 
   virtual void OnDataChannel(scoped_refptr<RTCDataChannel> data_channel) {
-    printf("==%s==>OnDataChannel\r\n", tags_.c_string());
+    printf("==%s==>\tOnDataChannel\r\n", tags_.c_string());
     fflush(stdout);
   };
 
   virtual void OnRenegotiationNeeded() {
-    printf("==%s==>OnRenegotiationNeeded\r\n", tags_.c_string());
+    printf("==%s==>\tOnRenegotiationNeeded\r\n", tags_.c_string());
     fflush(stdout);
   };
 
   virtual void OnTrack(scoped_refptr<RTCRtpTransceiver> transceiver) {
-    printf("==%s==>OnTrack\r\n", tags_.c_string());
+    printf("==%s==>\tOnTrack mid %s direction %d \r\n", tags_.c_string(), transceiver->mid().c_string(),transceiver->direction());
     fflush(stdout);
   };
 
   virtual void OnAddTrack(vector<scoped_refptr<RTCMediaStream>> streams,
                           scoped_refptr<RTCRtpReceiver> receiver) {
-    printf("==%s==>OnAddTrack MediaType %d %s\r\n", tags_.c_string(), receiver->media_type(), receiver->track()->id().c_string());
+    printf("==%s==>\tOnAddTrack MediaType %d %s\r\n", tags_.c_string(), receiver->media_type(), receiver->track()->id().c_string());
     fflush(stdout);
   };
 
   virtual void OnRemoveTrack(scoped_refptr<RTCRtpReceiver> receiver) {
-    printf("==%s==>OnRemoveTrack\r\n", tags_.c_string());
+    printf("==%s==>\tOnRemoveTrack\r\n", tags_.c_string());
     fflush(stdout);
   };
 };
@@ -220,30 +220,38 @@ int main() {
 
   //摄像设备测试
   auto video_device_ = pcFactory->GetVideoDevice();
-  printf(" Number Of Video Devices %d \r\n", video_device_->NumberOfDevices());
+  int cnum=video_device_->NumberOfDevices();
+  printf(" Number Of Video Devices %d \r\n", cnum);
   char deviceNameUTF8[255];
   char deviceUniqueIdUTF8[255];
-  video_device_->GetDeviceName(0, deviceNameUTF8, 254, deviceUniqueIdUTF8, 254);
-  printf(" Name Of Video Devices [%s] [%s]\r\n", deviceNameUTF8, deviceUniqueIdUTF8);
+  for(int i=0;i<cnum;i++){
+    video_device_->GetDeviceName(i, deviceNameUTF8, 254, deviceUniqueIdUTF8, 254);
+    printf(" Name Of Video Devices [%s] [%s]\r\n", deviceNameUTF8, deviceUniqueIdUTF8);
+  }
 
   //摄像设备捕获
   auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 1280, 720, 30);
   auto constraints = RTCMediaConstraints::Create();
   auto video_source_ = pcFactory->CreateVideoSource(video_caputer_, "Test", constraints);
   // auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
-
   // video_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
 
   //音频设备测试
   auto audio_device_ = pcFactory->GetAudioDevice();
-  printf(" Number Of Audio Recording Devices %d \r\n", audio_device_->RecordingDevices());
-  printf(" Number Of Audio Playout Devices %d \r\n", audio_device_->PlayoutDevices());
+  int rnum=audio_device_->RecordingDevices();
+  int pnum=audio_device_->PlayoutDevices();
+  printf(" Number Of Audio Recording Devices %d \r\n",rnum);
+  printf(" Number Of Audio Playout Devices %d \r\n", pnum);
   char name[RTCAudioDevice::kAdmMaxDeviceNameSize];
   char guid[RTCAudioDevice::kAdmMaxGuidSize];
-  audio_device_->RecordingDeviceName(0, name, guid);
-  printf(" Name Of Audio Recording Devices [%s] [%s] \r\n", name, guid);
-  audio_device_->PlayoutDeviceName(0, name, guid);
-  printf(" Name Of Audio Playout Devices [%s] [%s] \r\n", name, guid);
+  for (int i=0;i<rnum;i++){
+    audio_device_->RecordingDeviceName(i, name, guid);
+    printf(" Name Of Audio Recording Devices [%s] [%s] \r\n", name, guid);
+  }
+  for (int i=0;i<pnum;i++){
+    audio_device_->PlayoutDeviceName(i, name, guid);
+    printf(" Name Of Audio Playout Devices [%s] [%s] \r\n", name, guid);
+  }
   audio_device_->SetPlayoutDevice(0);
   audio_device_->SetRecordingDevice(0);
   //音频设备捕获
@@ -253,6 +261,7 @@ int main() {
   auto pc_mc = RTCMediaConstraints::Create();
   pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kEnableIPv6,"false");
   pc_mc->AddOptionalConstraint(RTCMediaConstraints::kEnableIPv6,"false");
+  pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kIceRestart,"true");
   auto pc_sender = pcFactory->Create(config_, pc_mc);
   auto pc_receiver = pcFactory->Create(config_, pc_mc);
   // TODO 后续使用AddTransceiver代理AddStream
@@ -267,70 +276,82 @@ int main() {
   // pc中添加流
   // pc_sender->AddStream(stream_);
   // pc_receiver->AddStream(stream_);
-  // vector<string> streamid ={string("Test")};
-  std::vector<std::string> stream_ids;
-  stream_ids.push_back("Test");
+
+  std::vector<std::string> stream_ids({"Test"});
   pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
   pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"),stream_ids);
-  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"),stream_ids);
-  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"),stream_ids);
-  pc_sender->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),stream_ids);
-  pc_sender->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),stream_ids);
+  // pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"),stream_ids);
+  // pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"),stream_ids);
+  auto v_sender=pc_sender->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),stream_ids);
+  // pc_sender->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),stream_ids);
+  // pc_receiver->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
+  // pc_receiver->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),stream_ids);
   //设置状态回调
   pc_receiver->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("answer", pc_sender));
   pc_sender->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("offer", pc_receiver));
-  string sdp,type,error;
-
+  string o_sdp,o_type,error;
+  string a_sdp,a_type;
   int ret=0;
-  ret=waitCreateDescription(pc_sender,&RTCPeerConnection::CreateOffer, pc_mc, sdp,type,error);
+  ret=waitCreateDescription(pc_sender,&RTCPeerConnection::CreateOffer, pc_mc, o_sdp,o_type,error);
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
   }else{
-    printf("=== CreateOffer ===\r\n%s",sdp.c_string());
+    printf("=== CreateOffer ===\r\n");
   }
-  ret=waitSetDescription(pc_sender,&RTCPeerConnection::SetLocalDescription,sdp,type,error);
-  if (ret<0){
-    printf("=== %s ===\r\n", error.c_string());
-  }else{
-    printf("=== SetLocalDescription ===\r\n");
-  }
-  ret=waitGetDescription(pc_sender,&RTCPeerConnection::GetLocalDescription,sdp,type,error);
+  ret=waitGetDescription(pc_sender,&RTCPeerConnection::GetLocalDescription,o_sdp,o_type,error);
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
   }else{
     printf("=== GetLocalDescription ===\r\n");
   }
-  ret=waitSetDescription(pc_receiver,&RTCPeerConnection::SetRemoteDescription,sdp,type,error);
+  ret=waitSetDescription(pc_receiver,&RTCPeerConnection::SetRemoteDescription,o_sdp,o_type,error);
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
   }else{
     printf("=== SetRemoteDescription ===\r\n");
   }
-  ret=waitCreateDescription(pc_receiver,&RTCPeerConnection::CreateAnswer, pc_mc, sdp,type,error);
+  ret=waitCreateDescription(pc_receiver,&RTCPeerConnection::CreateAnswer, pc_mc, a_sdp,a_type,error);
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
   }else{
     printf("=== CreateAnswer ===\r\n");
   }
-  ret=waitSetDescription(pc_receiver,&RTCPeerConnection::SetLocalDescription,sdp,type,error);  
-  if (ret<0){
-    printf("=== %s ===\r\n", error.c_string());
-  }else{
-    printf("=== SetLocalDescription ===\r\n");
-  }
-  ret=waitGetDescription(pc_receiver,&RTCPeerConnection::GetLocalDescription,sdp,type,error);  
+
+  ret=waitGetDescription(pc_receiver,&RTCPeerConnection::GetLocalDescription,a_sdp,a_type,error);  
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
   }else{
     printf("=== GetLocalDescription ===\r\n");
   }
-  ret=waitSetDescription(pc_sender,&RTCPeerConnection::SetRemoteDescription,sdp,type,error);
+
+  //通过SetLocalDescription开始获取ICE
+  ret=waitSetDescription(pc_sender,&RTCPeerConnection::SetLocalDescription,o_sdp,o_type,error);
+  if (ret<0){
+    printf("=== %s ===\r\n", error.c_string());
+  }else{
+    printf("=== SetLocalDescription ===\r\n");
+  }
+  ret=waitSetDescription(pc_receiver,&RTCPeerConnection::SetLocalDescription,a_sdp,a_type,error);  
+  if (ret<0){
+    printf("=== %s ===\r\n", error.c_string());
+  }else{
+    printf("=== SetLocalDescription ===\r\n");
+  }
+
+  ret=waitSetDescription(pc_sender,&RTCPeerConnection::SetRemoteDescription,a_sdp,a_type,error);
   if (ret<0){
     printf("=== %s ===\r\n", error.c_string());
   }else{
     printf("=== SetRemoteDescription ===\r\n");
   }
   pc_sender->RestartIce();
+  // auto rtp_senders=pc_sender->senders();
+  // for (scoped_refptr<RTCRtpSender> sender : rtp_senders.std_vector()) {
+    
+  // }
+
+
+
   getchar();
   pc_sender->Close();
   pc_receiver->Close();
