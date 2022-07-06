@@ -56,16 +56,23 @@ class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame
 
 class RTCDataChannelObserverImpl : public RTCDataChannelObserver {
   public:  
-  virtual void OnStateChange(RTCDataChannelState state){};
-  virtual void OnMessage(const char* buffer, int length, bool binary){};
+    RTCDataChannelObserverImpl(string label):label_(label){}
+    virtual void OnStateChange(RTCDataChannelState state){
+      std::cout<<"RTCDataChannel ["<<label_.c_string()<<"]OnStateChange:"<<state<<std::endl;
+    };
+    virtual void OnMessage(const char* buffer, int length, bool binary){
+      std::cout<<"RTCDataChannel["<<label_.c_string()<<"]OnMessage ["<<buffer<<"] len:"<<length<<std::endl;
+    };
+  private:
+    string label_;
 };
 
-// class TrackStatsObserverImpl : public TrackStatsObserver{
-//   public:
-//   void OnComplete(const MediaTrackStatistics& reports){
-//     std::cout<<"bytes_received "<<reports.bytes_received<<std::endl;
-//   };
-// };
+class TrackStatsObserverImpl : public TrackStatsObserver{
+  public:
+  void OnComplete(const MediaTrackStatistics& reports){
+    std::cout<<"bytes_received "<<reports.bytes_received<<std::endl;
+  };
+};
 
 class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
   scoped_refptr<RTCPeerConnection> pc_;
@@ -120,7 +127,8 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
   };
 
   virtual void OnDataChannel(scoped_refptr<RTCDataChannel> data_channel) {
-    printf("==%s==>\tOnDataChannel\r\n", tags_.c_string());
+    data_channel->RegisterObserver(new RTCDataChannelObserverImpl(data_channel->label()));
+    printf("==%s==>\t OnDataChannel\r\n", tags_.c_string());
     fflush(stdout);
   };
 
@@ -340,9 +348,18 @@ int main() {
 #endif
 
 
+ auto trackStats = scoped_refptr<TrackStatsObserverImpl>(
+      new RefCountedObject<TrackStatsObserverImpl>());
+
   //设置状态回调
   pc_receiver->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("answer", pc_sender));
+  
   pc_sender->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("offer", pc_receiver));
+
+  RTCDataChannelInit *dcInit=new RTCDataChannelInit();
+  auto dc=pc_sender->CreateDataChannel("api",dcInit);
+  
+
 
   std::cout<<std::endl << "=========          BEGIN SWITCH SDP && ICE          ========"<<std::endl<<std::endl;
   string o_sdp,o_type,error;
@@ -398,18 +415,23 @@ int main() {
   if (ret<0){
     printf("+++ pc_receiver\tGetLocalDescription ERR:%s \r\n", error.c_string());
   }else{
-    printf("+++ pc_receiver\tGetLocalDescription \r\n%s",a_sdp.c_string());
+    // printf("+++ pc_receiver\tGetLocalDescription \r\n%s",a_sdp.c_string());
   }
 
   ret=waitGetDescription(pc_sender,&RTCPeerConnection::GetLocalDescription,o_sdp,o_type,error);
   if (ret<0){
     printf("+++ pc_sender\tGetLocalDescription ERR:%s \r\n", error.c_string());
   }else{
-    printf("+++ pc_sender\tGetLocalDescription \r\n%s",o_sdp.c_string());
+    // printf("+++ pc_sender\tGetLocalDescription \r\n%s",o_sdp.c_string());
   }
 
 
   // pc_sender->RestartIce();
+  do{
+    std:string msg="Hello World";
+    dc->Send((const uint8_t *)msg.c_string(),msg.size()+1,false);
+    usleep(1000000);
+  }while(true);
   getchar();
   pc_sender->Close();
   pc_receiver->Close();
