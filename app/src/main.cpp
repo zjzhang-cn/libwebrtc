@@ -30,17 +30,21 @@ using namespace libwebrtc;
 class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame>> {
  public:
   RTCVideoRendererImpl(string tag)
-      : seq_(0), tag_(tag) {}
+      : seq_(0), tag_(tag) {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        tv_= tv.tv_sec * 1000 + tv.tv_usec / 1000;
+      }
   virtual ~RTCVideoRendererImpl() {}
   virtual void OnFrame(scoped_refptr<RTCVideoFrame> frame) {
     seq_++;
-    if (seq_ % 10 == 0) {
+    if (seq_ % 30 == 0) {
       struct timeval tv;
       gettimeofday(&tv, NULL);
       ulong now = tv.tv_sec * 1000 + tv.tv_usec / 1000;
       ulong diff = now - tv_;
       tv_ = now;
-      printf("[%s] Frame %dx%d %lu %f\r\n", tag_.c_string(), frame->width(), frame->height(), diff, 10000.0 / diff);
+      printf("[%s] Frame %dx%d %lu %f\r\n", tag_.c_string(), frame->width(), frame->height(), diff, 30000.0 / diff);
       fflush(stdout);
     }
   }
@@ -232,7 +236,7 @@ int main() {
   }
 
   //摄像设备捕获
-  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 1280, 720, 30);
+  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 640, 480, 30);
   auto constraints = RTCMediaConstraints::Create();
   auto video_source_ = pcFactory->CreateVideoSource(video_caputer_, "Test", constraints);
   // auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
@@ -266,20 +270,43 @@ int main() {
   pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kIceRestart,"true");
   auto pc_sender = pcFactory->Create(config_, pc_mc);
   auto pc_receiver = pcFactory->Create(config_, pc_mc);
-  // TODO 1.使用AddTransceiver添加媒体
+  // 1.使用AddStream方式添加媒体(过时)
+#if 0  
+  auto stream_ = pcFactory->CreateStream("Test");
+  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
+  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"));
+  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"));
+  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"));
+  stream_->AddTrack(video_track_);
+  pc_sender->AddStream(stream_);
+  pc_receiver->AddStream(stream_);
+#endif
+  // 2.使用AddTransceiver添加媒体
 
-  // 2.使用AddStream方式添加媒体(过时)
-  // auto stream_ = pcFactory->CreateStream("Test");
-  // stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
-  // stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"));
-  // stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"));
-  // stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"));
-  // stream_->AddTrack(video_track_);
-  // pc中添加流
-  // pc_sender->AddStream(stream_);
-  // pc_receiver->AddStream(stream_);
+  std::vector<std::string> stream_ids({"Test"});
+  libwebrtc::scoped_refptr<libwebrtc::RTCRtpEncodingParameters> encoding =
+      RTCRtpEncodingParameters::Create();
+
+  encoding->set_active(true);
+  encoding->set_max_bitrate_bps(500000);
+  encoding->set_min_bitrate_bps(300000);
+  encoding->set_max_framerate(15);  
+  encoding->set_scale_resolution_down_by(1.0);
+  //encoding->set_rid();
+  //encoding->set_ssrc();
+  //encoding->set_num_temporal_layers();
+  //encoding->set_scale_resolution_down_by();
+  std::vector<scoped_refptr<RTCRtpEncodingParameters>> encodings;
+  encodings.push_back(encoding);
+  auto init=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids,encodings);
+  //pc_sender->AddTransceiver(RTCMediaType::VIDEO,init);
+  auto trans = pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),init);
+  // auto trans = pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"));  
+  //pc_receiver->AddTransceiver(RTCMediaType::VIDEO);
+  pc_receiver->AddTransceiver(RTCMediaType::VIDEO);
 
   // 3.使用AddTrack方式添加媒体
+#if 0
   std::vector<std::string> stream_ids({"Test"});
   pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
   pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"),stream_ids);
@@ -295,11 +322,9 @@ int main() {
     std::cout << "==> max_framerate " <<encoding->max_framerate() <<std::endl;
   }
   pc_sender->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),stream_ids);
-  
-  // pc_receiver->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
-  // pc_receiver->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),stream_ids);
-
-
+  pc_receiver->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
+  pc_receiver->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),stream_ids);
+#endif
 
 
   //设置状态回调
@@ -371,13 +396,7 @@ int main() {
   }
 
 
-  pc_sender->RestartIce();
-  // auto rtp_senders=pc_sender->senders();
-  // for (scoped_refptr<RTCRtpSender> sender : rtp_senders.std_vector()) {
-    
-  // }
-
-
+  // pc_sender->RestartIce();
 
   getchar();
   pc_sender->Close();
