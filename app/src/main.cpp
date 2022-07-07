@@ -225,6 +225,8 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
   virtual void OnRenegotiationNeeded() {
     printf("==%s==>\tOnRenegotiationNeeded\r\n", tags_.c_string());
     //重新协商
+    // 此处使用线程，因为在exchangeDescription方法中会阻塞，并等待CreateOffer的回调
+    // 但是由于OnRenegotiationNeeded 也在WebRTC的信号线程中，所以CreateOffer的回调不会返回。
     new std::thread(exchangeDescription,pc_,other_);
   };
 
@@ -459,8 +461,8 @@ int main() {
   for(int i=0;i<5;i++) usleep(1000000);
   std::vector<std::string> stream_ids_1({"Test_2"});
   auto init1=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids_1,encodings);
-  pc_receiver->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),init1);
-
+  pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),init1);
+  
   //重新协商ICE
   for(int i=0;i<5;i++) usleep(1000000);
   pc_sender->RestartIce();
