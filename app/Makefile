@@ -7,7 +7,7 @@ DEPENDENCY_DIR := dependency
 CXX := clang++
 CXXFLAGS := -std=c++11 -g -Wall -I./$(INCLUDE_DIR) -DDEBUG -I../include
 #编辑此处，将其改为libwebrtc的路径位置
-LDLIBS := -L../../out-release/ -lwebrtc
+LDLIBS := -L../../out-release/ -lwebrtc -lpthread -lm
 
 SRCS := $(wildcard $(SRC_DIR)/*.cpp)
 HDRS := $(wildcard $(INCLUDE_DIR)/*.h)
