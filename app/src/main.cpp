@@ -396,16 +396,13 @@ int main() {
   dc->RegisterObserver([](scoped_refptr<RTCDataChannel> dc) {
     class _ : public RTCDataChannelObserver {
      public:
-      _(scoped_refptr<RTCDataChannel> dc)
-          : dc_(dc) {}
+      _(scoped_refptr<RTCDataChannel> dc): dc_(dc) {}
       virtual void OnStateChange(RTCDataChannelState state) {
         std::cout << "Offer RTCDataChannel [" << dc_->label().c_string() << "]OnStateChange:" << state << std::endl;
       };
       virtual void OnMessage(const char* buffer, int length, bool binary) {
         std::cout << "Offer RTCDataChannel[" << dc_->label().c_string() << "]OnMessage [" << buffer << "] len:" << length << std::endl;
-        // dc_->Send((const uint8_t *)msg.c_string(),msg.size()+1,false);
       };
-
      private:
       scoped_refptr<RTCDataChannel> dc_;
     };
