@@ -27,9 +27,11 @@
 #include "rtc_video_renderer.h"
 
 using namespace libwebrtc;
-
+//交换SDP的方法
 int exchangeDescription(scoped_refptr<libwebrtc::RTCPeerConnection> pc_sender,scoped_refptr<libwebrtc::RTCPeerConnection> pc_receiver);
 
+
+//同步回调的声明
 typedef void (RTCPeerConnection::*CreateFn) (
     OnSdpCreateSuccess,
     OnSdpCreateFailure,
@@ -108,6 +110,7 @@ int waitGetDescription(scoped_refptr<RTCPeerConnection> pc,GetLocalFn fn,string 
   return ret;
 }
 
+//视频回显的实现
 class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame>> {
  public:
   RTCVideoRendererImpl(string tag)
@@ -135,6 +138,7 @@ class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame
   string tag_;
 };
 
+//DataChannel的回调实现
 class RTCDataChannelObserverImpl : public RTCDataChannelObserver {
   public:  
     RTCDataChannelObserverImpl(string label):label_(label){}
@@ -155,6 +159,7 @@ class TrackStatsObserverImpl : public TrackStatsObserver{
   };
 };
 
+//PeerConnection的回调实现
 class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
   scoped_refptr<RTCPeerConnection> pc_;
   scoped_refptr<RTCPeerConnection> other_;
@@ -247,26 +252,27 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
 
 
 int exchangeDescription(scoped_refptr<libwebrtc::RTCPeerConnection> pc_sender,scoped_refptr<libwebrtc::RTCPeerConnection> pc_receiver){
-
   std::cout<<std::endl << "=========          Exchange Description         ========"<<std::endl<<std::endl;
   auto pc_mc = RTCMediaConstraints::Create();
   // pc_mc->AddMandatoryConstraint("IceRestart","true");
   string o_sdp,o_type,error;
   string a_sdp,a_type;
   int ret=0;
+  //创建Offer
   ret=waitCreateDescription(pc_sender,&RTCPeerConnection::CreateOffer, pc_mc, o_sdp,o_type,error);
   if (ret<0){
     printf("+++ pc_sender\tCreateOffer ERR:%sr\n", error.c_string());
   }else{
     printf("+++ pc_sender\tCreateOfferr\n");
   }
-
+  //设置Offer
   ret=waitSetDescription(pc_receiver,&RTCPeerConnection::SetRemoteDescription,o_sdp,o_type,error);
   if (ret<0){
     printf("+++ pc_receiver\tSetRemoteDescription ERR:%s\r\n", error.c_string());
   }else{
     printf("+++ pc_receiver\tSetRemoteDescription \r\n");
   }
+  //创建Answer
   ret=waitCreateDescription(pc_receiver,&RTCPeerConnection::CreateAnswer, pc_mc, a_sdp,a_type,error);
   if (ret<0){
     printf("+++ pc_receiver\tCreateAnswer ERR:%s \r\n", error.c_string());
@@ -275,31 +281,27 @@ int exchangeDescription(scoped_refptr<libwebrtc::RTCPeerConnection> pc_sender,sc
   }
 
   //通过SetLocalDescription开始获取ICE
-
+  //设置本地描述
   ret=waitSetDescription(pc_receiver,&RTCPeerConnection::SetLocalDescription,a_sdp,a_type,error);  
   if (ret<0){
     printf("+++ pc_receiver\tSetLocalDescription ERR:%s \r\n", error.c_string());
   }else{
     printf("+++ pc_receiver\tSetLocalDescription \r\n");
   }
-
-
   ret=waitSetDescription(pc_sender,&RTCPeerConnection::SetLocalDescription,o_sdp,o_type,error);
   if (ret<0){
     printf("+++ pc_sender\tSetLocalDescription ERR:%s \r\n", error.c_string());
   }else{
     printf("+++ pc_sender\tSetLocalDescription \r\n");
   }
-
+  //设置Answer
   ret=waitSetDescription(pc_sender,&RTCPeerConnection::SetRemoteDescription,a_sdp,a_type,error);
   if (ret<0){
     printf("+++ pc_sender\tSetRemoteDescription ERR:%s \r\n", error.c_string());
   }else{
     printf("+++ pc_sender\tSetRemoteDescription \r\n");
   }
-
-
-
+  //获取本地描述
   ret=waitGetDescription(pc_receiver,&RTCPeerConnection::GetLocalDescription,a_sdp,a_type,error);  
   if (ret<0){
     printf("+++ pc_receiver\tGetLocalDescription ERR:%s \r\n", error.c_string());
@@ -307,7 +309,6 @@ int exchangeDescription(scoped_refptr<libwebrtc::RTCPeerConnection> pc_sender,sc
     printf("+++ pc_receiver\tGetLocalDescription \r\n");
     //printf("+++ pc_receiver\tGetLocalDescription \r\n%s",a_sdp.c_string());
   }
-
   ret=waitGetDescription(pc_sender,&RTCPeerConnection::GetLocalDescription,o_sdp,o_type,error);
   if (ret<0){
     printf("+++ pc_sender\tGetLocalDescription ERR:%s \r\n", error.c_string());
@@ -324,14 +325,16 @@ int main() {
   config_.sdp_semantics = SdpSemantics::kUnifiedPlan;
   config_.tcp_candidate_policy=TcpCandidatePolicy::kTcpCandidatePolicyDisabled;
   config_.bundle_policy=BundlePolicy::kBundlePolicyMaxBundle;
+
+  //初始化PC工厂
   scoped_refptr<RTCPeerConnectionFactory> pcFactory = LibWebRTC::CreateRTCPeerConnectionFactory();
   pcFactory->Initialize();
   //屏幕设备测试
-  auto screen_device_ = pcFactory->GetDesktopDevice();
-  auto video_screen_ = screen_device_->CreateScreenCapturer();
-  auto video_window_ = screen_device_->CreateWindowCapturer();
+  // auto screen_device_ = pcFactory->GetDesktopDevice();
+  // auto video_screen_ = screen_device_->CreateScreenCapturer();
+  // auto video_window_ = screen_device_->CreateWindowCapturer();
 
-  //摄像设备测试
+  //枚举视频设备
   auto video_device_ = pcFactory->GetVideoDevice();
   int cnum=video_device_->NumberOfDevices();
   printf(" Number Of Video Devices %d \r\n", cnum);
@@ -342,14 +345,14 @@ int main() {
     printf(" Name Of Video Devices [%s] [%s]\r\n", deviceNameUTF8, deviceUniqueIdUTF8);
   }
 
-  //摄像设备捕获
+  //创建摄像设备源
   auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 640, 480, 30);
   auto constraints = RTCMediaConstraints::Create();
   auto video_source_ = pcFactory->CreateVideoSource(video_caputer_, "Test", constraints);
   // auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
   // video_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
 
-  //音频设备测试
+  //枚举音频设备
   auto audio_device_ = pcFactory->GetAudioDevice();
   int rnum=audio_device_->RecordingDevices();
   int pnum=audio_device_->PlayoutDevices();
@@ -367,20 +370,23 @@ int main() {
   }
   audio_device_->SetPlayoutDevice(0);
   audio_device_->SetRecordingDevice(0);
-  //音频设备捕获
+
+  //创建音频设备源
   auto audio_source_ = pcFactory->CreateAudioSource("Test");
   auto audio_track_ = pcFactory->CreateAudioTrack(audio_source_, "Audio_Test");
 
+
+  //创建PC
   auto pc_mc = RTCMediaConstraints::Create();
   pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kEnableIPv6,RTCMediaConstraints::kValueFalse);
   pc_mc->AddOptionalConstraint(RTCMediaConstraints::kEnableIPv6,RTCMediaConstraints::kValueFalse);
   // pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kIceRestart,"true");
-
-
   auto pc_sender = pcFactory->Create(config_, pc_mc);
   auto pc_receiver = pcFactory->Create(config_, pc_mc);
+  //创建DC
   RTCDataChannelInit *dcInit=new RTCDataChannelInit();
   auto dc=pc_sender->CreateDataChannel("api",dcInit);
+
   // 1.使用AddStream方式添加媒体(过时)
 #if 0  
   auto stream_ = pcFactory->CreateStream("Test");
@@ -394,10 +400,9 @@ int main() {
 #endif
   // 2.使用AddTransceiver添加媒体
 #if 1
-  std::vector<std::string> stream_ids({"Test"});
+  std::vector<std::string> stream_ids({"Test1"});
   libwebrtc::scoped_refptr<libwebrtc::RTCRtpEncodingParameters> encoding =
       RTCRtpEncodingParameters::Create();
-
   encoding->set_active(true);
   encoding->set_max_bitrate_bps(500000);
   encoding->set_min_bitrate_bps(300000);
@@ -411,8 +416,6 @@ int main() {
   encodings.push_back(encoding);
   auto init=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids,encodings);
   pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),init);
-
- 
   pc_sender->AddTransceiver(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
 
   // auto trans = pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"));  
@@ -449,29 +452,32 @@ int main() {
   pc_receiver->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("answer", pc_receiver,pc_sender));
   pc_sender  ->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("offer", pc_sender,pc_receiver));
 
-
+  //交换SDP
   exchangeDescription(pc_sender,pc_receiver);
 
+  //添加新的的视频Track
   for(int i=0;i<5;i++) usleep(1000000);
   std::vector<std::string> stream_ids_1({"Test_2"});
   auto init1=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids_1,encodings);
   pc_receiver->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),init1);
 
+  //重新协商ICE
   for(int i=0;i<5;i++) usleep(1000000);
   pc_sender->RestartIce();
+
+  //循环发送DC消息
   do{
     printf("+++ Send ChannelData \r\n");
     string msg="Hello World";
     dc->Send((const uint8_t *)msg.c_string(),msg.size()+1,false);
     usleep(1000000);
   }while(true);
+
   getchar();
   pc_sender->Close();
   pc_receiver->Close();
   printf("Fininsh\r\n");
   audio_device_ = nullptr;
   video_device_ = nullptr;
-  video_screen_ = nullptr;
-  video_window_ = nullptr;
   pcFactory->Terminate();
 }
