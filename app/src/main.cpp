@@ -451,19 +451,20 @@ int main() {
 
 
   exchangeDescription(pc_sender,pc_receiver);
-  usleep(1000000);
 
-  std::vector<std::string> stream_ids_1({"Test_1"});
+  for(int i=0;i<5;i++) usleep(1000000);
+  std::vector<std::string> stream_ids_1({"Test_2"});
   auto init1=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids_1,encodings);
+  pc_receiver->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),init1);
 
-  pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),init1);
-  // do{
-  //   printf("+++ Send ChannelData \r\n");
-  //   string msg="Hello World";
-  //   dc->Send((const uint8_t *)msg.c_string(),msg.size()+1,false);
-  //   usleep(1000000);
-  //   //pc_sender->RestartIce();
-  // }while(true);
+  for(int i=0;i<5;i++) usleep(1000000);
+  pc_sender->RestartIce();
+  do{
+    printf("+++ Send ChannelData \r\n");
+    string msg="Hello World";
+    dc->Send((const uint8_t *)msg.c_string(),msg.size()+1,false);
+    usleep(1000000);
+  }while(true);
   getchar();
   pc_sender->Close();
   pc_receiver->Close();
