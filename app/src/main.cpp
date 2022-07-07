@@ -324,6 +324,9 @@ int exchangeDescription(scoped_refptr<libwebrtc::RTCPeerConnection> pc_sender,sc
 RTCConfiguration config_;
 int main() {
   LibWebRTC::Initialize();
+  // config_.ice_servers[0].uri=
+  // config_.ice_servers[0].username=
+  // config_.ice_servers[0].password=
   config_.sdp_semantics = SdpSemantics::kUnifiedPlan;
   config_.tcp_candidate_policy=TcpCandidatePolicy::kTcpCandidatePolicyDisabled;
   config_.bundle_policy=BundlePolicy::kBundlePolicyMaxBundle;
@@ -348,7 +351,7 @@ int main() {
   }
 
   //创建摄像设备源
-  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 640, 480, 30);
+  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 1280, 720, 30);
   auto constraints = RTCMediaConstraints::Create();
   auto video_source_ = pcFactory->CreateVideoSource(video_caputer_, "Test", constraints);
   // auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
@@ -383,11 +386,11 @@ int main() {
   pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kEnableIPv6,RTCMediaConstraints::kValueFalse);
   pc_mc->AddOptionalConstraint(RTCMediaConstraints::kEnableIPv6,RTCMediaConstraints::kValueFalse);
   // pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kIceRestart,"true");
-  auto pc_sender = pcFactory->Create(config_, pc_mc);
-  auto pc_receiver = pcFactory->Create(config_, pc_mc);
+  auto pc_offer = pcFactory->Create(config_, pc_mc);
+  auto pc_answer = pcFactory->Create(config_, pc_mc);
   //创建DC
   RTCDataChannelInit *dcInit=new RTCDataChannelInit();
-  auto dc=pc_sender->CreateDataChannel("api",dcInit);
+  auto dc=pc_offer->CreateDataChannel("api",dcInit);
 
   // 1.使用AddStream方式添加媒体(过时)
 #if 0  
@@ -403,22 +406,30 @@ int main() {
   // 2.使用AddTransceiver添加媒体
 #if 1
   std::vector<std::string> stream_ids({"Test1"});
-  libwebrtc::scoped_refptr<libwebrtc::RTCRtpEncodingParameters> encoding =
+  libwebrtc::scoped_refptr<libwebrtc::RTCRtpEncodingParameters> encoding_l =
       RTCRtpEncodingParameters::Create();
-  encoding->set_active(true);
-  encoding->set_max_bitrate_bps(500000);
-  encoding->set_min_bitrate_bps(300000);
-  encoding->set_max_framerate(15);  
-  encoding->set_scale_resolution_down_by(1.0);
-  //encoding->set_rid();
-  //encoding->set_ssrc();
-  //encoding->set_num_temporal_layers();
-  //encoding->set_scale_resolution_down_by();
-  std::vector<scoped_refptr<RTCRtpEncodingParameters>> encodings;
-  encodings.push_back(encoding);
-  auto init=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids,encodings);
-  pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),init);
-  pc_sender->AddTransceiver(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
+  encoding_l->set_active(true);
+  encoding_l->set_max_bitrate_bps(500000);
+  encoding_l->set_min_bitrate_bps(100000);
+  encoding_l->set_max_framerate(15);
+  // encoding_l->set_num_temporal_layers(2);//同播数量
+  encoding_l->set_rid("l");
+  encoding_l->set_scale_resolution_down_by(2.0); //数值越大尺寸越小
+  libwebrtc::scoped_refptr<libwebrtc::RTCRtpEncodingParameters> encoding_h =
+      RTCRtpEncodingParameters::Create();
+  encoding_h->set_active(true);
+  encoding_h->set_max_bitrate_bps(900000);
+  encoding_h->set_min_bitrate_bps(100000);
+  encoding_h->set_max_framerate(30);
+  // encoding_h->set_num_temporal_layers(1);//同播数量
+  encoding_h->set_rid("h");
+  encoding_h->set_scale_resolution_down_by(1.0); //数值越大尺寸越小
+  std::vector<scoped_refptr<RTCRtpEncodingParameters>> encodings_l;
+  encodings_l.push_back(encoding_l);
+  auto init=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids,encodings_l);
+  // init->set_direction(RTCRtpTransceiverDirection::kSendOnly);
+  pc_offer->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),init);
+  pc_offer->AddTransceiver(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
 
   // auto trans = pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"));  
   // pc_receiver->AddTransceiver(RTCMediaType::VIDEO);
@@ -451,21 +462,23 @@ int main() {
 //       new RefCountedObject<TrackStatsObserverImpl>());
 
   //设置状态回调
-  pc_receiver->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("answer", pc_receiver,pc_sender));
-  pc_sender  ->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("offer", pc_sender,pc_receiver));
+  pc_answer->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("answer", pc_answer,pc_offer));
+  pc_offer  ->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("offer", pc_offer,pc_answer));
 
   //交换SDP
-  exchangeDescription(pc_sender,pc_receiver);
+  exchangeDescription(pc_offer,pc_answer);
 
   //添加新的的视频Track
   for(int i=0;i<5;i++) usleep(1000000);
   std::vector<std::string> stream_ids_1({"Test_2"});
-  auto init1=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids_1,encodings);
-  pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),init1);
+  std::vector<scoped_refptr<RTCRtpEncodingParameters>> encodings_h;
+  encodings_h.push_back(encoding_h);
+  pc_offer->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),
+    RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids_1,encodings_h));
   
   //重新协商ICE
-  for(int i=0;i<5;i++) usleep(1000000);
-  pc_sender->RestartIce();
+  // for(int i=0;i<5;i++) usleep(1000000);
+  // pc_offer->RestartIce();
 
   //循环发送DC消息
   do{
@@ -476,8 +489,8 @@ int main() {
   }while(true);
 
   getchar();
-  pc_sender->Close();
-  pc_receiver->Close();
+  pc_offer->Close();
+  pc_answer->Close();
   printf("Fininsh\r\n");
   audio_device_ = nullptr;
   video_device_ = nullptr;
