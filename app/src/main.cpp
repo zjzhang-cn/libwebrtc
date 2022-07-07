@@ -7,6 +7,8 @@
  **************************************************/
 
 #include <iostream>
+#include <unistd.h>
+#include <thread>         // std::thread
 #include <stdio.h>
 #include <sys/time.h>
 #include <condition_variable>
@@ -23,138 +25,10 @@
 #include "rtc_video_device.h"
 #include "rtc_video_frame.h"
 #include "rtc_video_renderer.h"
-#include <unistd.h>
+
 using namespace libwebrtc;
 
-
-class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame>> {
- public:
-  RTCVideoRendererImpl(string tag)
-      : seq_(0), tag_(tag) {
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        tv_= tv.tv_sec * 1000 + tv.tv_usec / 1000;
-      }
-  virtual ~RTCVideoRendererImpl() {}
-  virtual void OnFrame(scoped_refptr<RTCVideoFrame> frame) {
-    seq_++;
-    if (seq_ % 30 == 0) {
-      struct timeval tv;
-      gettimeofday(&tv, NULL);
-      ulong now = tv.tv_sec * 1000 + tv.tv_usec / 1000;
-      ulong diff = now - tv_;
-      tv_ = now;
-      printf("[%s] Frame %dx%d %lu %f\r\n", tag_.c_string(), frame->width(), frame->height(), diff, 30000.0 / diff);
-      fflush(stdout);
-    }
-  }
- private:
-  ulong tv_;
-  int seq_;
-  string tag_;
-};
-
-class RTCDataChannelObserverImpl : public RTCDataChannelObserver {
-  public:  
-    RTCDataChannelObserverImpl(string label):label_(label){}
-    virtual void OnStateChange(RTCDataChannelState state){
-      std::cout<<"RTCDataChannel ["<<label_.c_string()<<"]OnStateChange:"<<state<<std::endl;
-    };
-    virtual void OnMessage(const char* buffer, int length, bool binary){
-      std::cout<<"RTCDataChannel["<<label_.c_string()<<"]OnMessage ["<<buffer<<"] len:"<<length<<std::endl;
-    };
-  private:
-    string label_;
-};
-
-class TrackStatsObserverImpl : public TrackStatsObserver{
-  public:
-  void OnComplete(const MediaTrackStatistics& reports){
-    std::cout<<"bytes_received "<<reports.bytes_received<<std::endl;
-  };
-};
-
-class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
-  scoped_refptr<RTCPeerConnection> pc_;
-  string tags_;
- public:
-  RTCPeerConnectionObserverImpl(string tags, scoped_refptr<RTCPeerConnection> pc)
-      : pc_(pc), tags_(tags){};
-  virtual void OnSignalingState(RTCSignalingState state) {
-    printf("==%s==>\tOnSignalingState %d\r\n", tags_.c_string(), state);
-    fflush(stdout);
-  };
-
-  virtual void OnPeerConnectionState(RTCPeerConnectionState state) {
-    printf("==%s==>\tOnPeerConnectionState %d\r\n", tags_.c_string(), state);
-    fflush(stdout);
-  };
-
-  virtual void OnIceGatheringState(RTCIceGatheringState state) {
-    printf("==%s==>\tOnIceGatheringState %d\r\n", tags_.c_string(), state);
-    fflush(stdout);
-  };
-
-  virtual void OnIceConnectionState(RTCIceConnectionState state) {
-    printf("==%s==>\tOnIceConnectionState %d\r\n", tags_.c_string(), state);
-    fflush(stdout);
-  };
-
-  virtual void OnIceCandidate(scoped_refptr<RTCIceCandidate> candidate) {
-    printf("==%s==>\tOnIceCandidate %s\r\n", tags_.c_string(), candidate->candidate().c_string());
-    pc_->AddCandidate(candidate->sdp_mid(), candidate->sdp_mline_index(), candidate->candidate());
-    fflush(stdout);
-  };
-
-  virtual void OnAddStream(scoped_refptr<RTCMediaStream> stream) {
-    auto video = stream->video_tracks();
-    auto audio = stream->audio_tracks();
-    printf("==%s==>\tOnAddStream Video %lu\r\n", tags_.c_string(), video.size());
-    printf("==%s==>\tOnAddStream Audio %lu\r\n", tags_.c_string(), audio.size());
-    for (scoped_refptr<RTCVideoTrack> track : video.std_vector()) {
-      printf("==%s==>\tOnAddStream RTCVideoTrack %s\r\n", tags_.c_string(), track->id().c_string());
-      track->AddRenderer(new RTCVideoRendererImpl(tags_.std_string()+"\t"+ track->id().std_string()));
-    }
-    for (scoped_refptr<RTCAudioTrack> track : audio.std_vector()) {
-      printf("==%s==>\tOnAddStream RTCAudioTrack %s\r\n", tags_.c_string(), track->id().c_string());
-    }
-    fflush(stdout);
-  };
-
-  virtual void OnRemoveStream(scoped_refptr<RTCMediaStream> stream) {
-    printf("==%s==>OnRemoveStream\r\n", tags_.c_string());
-    fflush(stdout);
-  };
-
-  virtual void OnDataChannel(scoped_refptr<RTCDataChannel> data_channel) {
-    data_channel->RegisterObserver(new RTCDataChannelObserverImpl(data_channel->label()));
-    printf("==%s==>\t OnDataChannel\r\n", tags_.c_string());
-    fflush(stdout);
-  };
-
-  virtual void OnRenegotiationNeeded() {
-    printf("==%s==>\tOnRenegotiationNeeded\r\n", tags_.c_string());
-    fflush(stdout);
-  };
-
-  virtual void OnTrack(scoped_refptr<RTCRtpTransceiver> transceiver) {
-    printf("==%s==>\tOnTrack mid %s direction %d \r\n", tags_.c_string(), transceiver->mid().c_string(),transceiver->direction());
-    fflush(stdout);
-  };
-
-  virtual void OnAddTrack(vector<scoped_refptr<RTCMediaStream>> streams,
-                          scoped_refptr<RTCRtpReceiver> receiver) {
-    printf("==%s==>\tOnAddTrack MediaType %d %s\r\n", tags_.c_string(), receiver->media_type(), receiver->track()->id().c_string());
-    fflush(stdout);
-  };
-
-  virtual void OnRemoveTrack(scoped_refptr<RTCRtpReceiver> receiver) {
-    printf("==%s==>\tOnRemoveTrack\r\n", tags_.c_string());
-    fflush(stdout);
-  };
-};
-
-RTCConfiguration config_;
+int exchangeDescription(scoped_refptr<libwebrtc::RTCPeerConnection> pc_sender,scoped_refptr<libwebrtc::RTCPeerConnection> pc_receiver);
 
 typedef void (RTCPeerConnection::*CreateFn) (
     OnSdpCreateSuccess,
@@ -234,134 +108,149 @@ int waitGetDescription(scoped_refptr<RTCPeerConnection> pc,GetLocalFn fn,string 
   return ret;
 }
 
-
-int main() {
-  LibWebRTC::Initialize();
-  config_.sdp_semantics = SdpSemantics::kUnifiedPlan;
-  scoped_refptr<RTCPeerConnectionFactory> pcFactory = LibWebRTC::CreateRTCPeerConnectionFactory();
-  pcFactory->Initialize();
-  //屏幕设备测试
-  auto screen_device_ = pcFactory->GetDesktopDevice();
-  auto video_screen_ = screen_device_->CreateScreenCapturer();
-  auto video_window_ = screen_device_->CreateWindowCapturer();
-
-  //摄像设备测试
-  auto video_device_ = pcFactory->GetVideoDevice();
-  int cnum=video_device_->NumberOfDevices();
-  printf(" Number Of Video Devices %d \r\n", cnum);
-  char deviceNameUTF8[255];
-  char deviceUniqueIdUTF8[255];
-  for(int i=0;i<cnum;i++){
-    video_device_->GetDeviceName(i, deviceNameUTF8, 254, deviceUniqueIdUTF8, 254);
-    printf(" Name Of Video Devices [%s] [%s]\r\n", deviceNameUTF8, deviceUniqueIdUTF8);
+class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame>> {
+ public:
+  RTCVideoRendererImpl(string tag)
+      : seq_(0), tag_(tag) {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+        tv_= tv.tv_sec * 1000 + tv.tv_usec / 1000;
+      }
+  virtual ~RTCVideoRendererImpl() {}
+  virtual void OnFrame(scoped_refptr<RTCVideoFrame> frame) {
+    seq_++;
+    if (seq_ % 10 == 0) {
+      struct timeval tv;
+      gettimeofday(&tv, NULL);
+      ulong now = tv.tv_sec * 1000 + tv.tv_usec / 1000;
+      ulong diff = now - tv_;
+      tv_ = now;
+      printf("[%s] Frame %dx%d %lu %f\r\n", tag_.c_string(), frame->width(), frame->height(), diff, 10000.0 / diff);
+      fflush(stdout);
+    }
   }
+ private:
+  ulong tv_;
+  int seq_;
+  string tag_;
+};
 
-  //摄像设备捕获
-  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 640, 480, 30);
-  auto constraints = RTCMediaConstraints::Create();
-  auto video_source_ = pcFactory->CreateVideoSource(video_caputer_, "Test", constraints);
-  // auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
-  // video_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
+class RTCDataChannelObserverImpl : public RTCDataChannelObserver {
+  public:  
+    RTCDataChannelObserverImpl(string label):label_(label){}
+    virtual void OnStateChange(RTCDataChannelState state){
+      std::cout<<"RTCDataChannel ["<<label_.c_string()<<"]OnStateChange:"<<state<<std::endl;
+    };
+    virtual void OnMessage(const char* buffer, int length, bool binary){
+      std::cout<<"RTCDataChannel["<<label_.c_string()<<"]OnMessage ["<<buffer<<"] len:"<<length<<std::endl;
+    };
+  private:
+    string label_;
+};
 
-  //音频设备测试
-  auto audio_device_ = pcFactory->GetAudioDevice();
-  int rnum=audio_device_->RecordingDevices();
-  int pnum=audio_device_->PlayoutDevices();
-  printf(" Number Of Audio Recording Devices %d \r\n",rnum);
-  printf(" Number Of Audio Playout Devices %d \r\n", pnum);
-  char name[RTCAudioDevice::kAdmMaxDeviceNameSize];
-  char guid[RTCAudioDevice::kAdmMaxGuidSize];
-  for (int i=0;i<rnum;i++){
-    audio_device_->RecordingDeviceName(i, name, guid);
-    printf(" Name Of Audio Recording Devices [%s] [%s] \r\n", name, guid);
-  }
-  for (int i=0;i<pnum;i++){
-    audio_device_->PlayoutDeviceName(i, name, guid);
-    printf(" Name Of Audio Playout Devices [%s] [%s] \r\n", name, guid);
-  }
-  audio_device_->SetPlayoutDevice(0);
-  audio_device_->SetRecordingDevice(0);
-  //音频设备捕获
-  auto audio_source_ = pcFactory->CreateAudioSource("Test");
-  auto audio_track_ = pcFactory->CreateAudioTrack(audio_source_, "Audio_Test");
+class TrackStatsObserverImpl : public TrackStatsObserver{
+  public:
+  void OnComplete(const MediaTrackStatistics& reports){
+    std::cout<<"bytes_received "<<reports.bytes_received<<std::endl;
+  };
+};
 
+class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
+  scoped_refptr<RTCPeerConnection> pc_;
+  scoped_refptr<RTCPeerConnection> other_;
+  string tags_;
+
+ public:
+  RTCPeerConnectionObserverImpl(string tags, scoped_refptr<RTCPeerConnection> pc,scoped_refptr<RTCPeerConnection> other)
+      : pc_(pc),other_(other) ,tags_(tags){
+
+      };
+  virtual void OnSignalingState(RTCSignalingState state) {
+    printf("==%s==>\tOnSignalingState %d\r\n", tags_.c_string(), state);
+    fflush(stdout);
+  };
+
+  virtual void OnPeerConnectionState(RTCPeerConnectionState state) {
+    printf("==%s==>\tOnPeerConnectionState %d\r\n", tags_.c_string(), state);
+    fflush(stdout);
+  };
+
+  virtual void OnIceGatheringState(RTCIceGatheringState state) {
+    printf("==%s==>\tOnIceGatheringState %d\r\n", tags_.c_string(), state);
+    fflush(stdout);
+  };
+
+  virtual void OnIceConnectionState(RTCIceConnectionState state) {
+    printf("==%s==>\tOnIceConnectionState %d\r\n", tags_.c_string(), state);
+    fflush(stdout);
+  };
+
+  virtual void OnIceCandidate(scoped_refptr<RTCIceCandidate> candidate) {
+    printf("==%s==>\tOnIceCandidate %s\r\n", tags_.c_string(), candidate->candidate().c_string());
+    other_->AddCandidate(candidate->sdp_mid(), candidate->sdp_mline_index(), candidate->candidate());
+    fflush(stdout);
+  };
+
+  virtual void OnAddStream(scoped_refptr<RTCMediaStream> stream) {
+    auto video = stream->video_tracks();
+    auto audio = stream->audio_tracks();
+    printf("==%s==>\tOnAddStream Video %lu\r\n", tags_.c_string(), video.size());
+    printf("==%s==>\tOnAddStream Audio %lu\r\n", tags_.c_string(), audio.size());
+    for (scoped_refptr<RTCVideoTrack> track : video.std_vector()) {
+      printf("==%s==>\tOnAddStream RTCVideoTrack %s\r\n", tags_.c_string(), track->id().c_string());
+      track->AddRenderer(new RTCVideoRendererImpl(tags_.std_string()+"\t"+ track->id().std_string()));
+    }
+    for (scoped_refptr<RTCAudioTrack> track : audio.std_vector()) {
+      printf("==%s==>\tOnAddStream RTCAudioTrack %s\r\n", tags_.c_string(), track->id().c_string());
+    }
+    fflush(stdout);
+  };
+
+  virtual void OnRemoveStream(scoped_refptr<RTCMediaStream> stream) {
+    printf("==%s==>OnRemoveStream\r\n", tags_.c_string());
+    fflush(stdout);
+  };
+
+  virtual void OnDataChannel(scoped_refptr<RTCDataChannel> data_channel) {
+    data_channel->RegisterObserver(new RTCDataChannelObserverImpl(data_channel->label()));
+    printf("==%s==>\t OnDataChannel\r\n", tags_.c_string());
+    fflush(stdout);
+  };
+
+  virtual void OnRenegotiationNeeded() {
+    printf("==%s==>\tOnRenegotiationNeeded\r\n", tags_.c_string());
+    //重新协商
+    new std::thread(exchangeDescription,pc_,other_);
+  };
+
+  virtual void OnTrack(scoped_refptr<RTCRtpTransceiver> transceiver) {
+    printf("==%s==>\tOnTrack mid %s direction %d \r\n", tags_.c_string(), transceiver->mid().c_string(),transceiver->direction());
+    fflush(stdout);
+  };
+
+  virtual void OnAddTrack(vector<scoped_refptr<RTCMediaStream>> streams,
+                          scoped_refptr<RTCRtpReceiver> receiver) {
+    auto track=receiver->track();
+    printf("==%s==>\tOnAddTrack MediaType %d %s %s\r\n", tags_.c_string(), receiver->media_type(),receiver->track()->kind().c_string() ,track->id().c_string());
+    if (receiver->track()->kind().std_string()=="video"){
+      ((RTCVideoTrack *) track.get())->AddRenderer(new RTCVideoRendererImpl(tags_.std_string()+"\t"+ track->id().std_string()));
+    }
+  };
+
+  virtual void OnRemoveTrack(scoped_refptr<RTCRtpReceiver> receiver) {
+    printf("==%s==>\tOnRemoveTrack\r\n", tags_.c_string());
+    fflush(stdout);
+  };
+};
+
+
+
+
+int exchangeDescription(scoped_refptr<libwebrtc::RTCPeerConnection> pc_sender,scoped_refptr<libwebrtc::RTCPeerConnection> pc_receiver){
+
+  std::cout<<std::endl << "=========          Exchange Description         ========"<<std::endl<<std::endl;
   auto pc_mc = RTCMediaConstraints::Create();
-  pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kEnableIPv6,"false");
-  pc_mc->AddOptionalConstraint(RTCMediaConstraints::kEnableIPv6,"false");
-  pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kIceRestart,"true");
-  auto pc_sender = pcFactory->Create(config_, pc_mc);
-  auto pc_receiver = pcFactory->Create(config_, pc_mc);
-  // 1.使用AddStream方式添加媒体(过时)
-#if 0  
-  auto stream_ = pcFactory->CreateStream("Test");
-  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
-  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"));
-  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"));
-  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"));
-  stream_->AddTrack(video_track_);
-  pc_sender->AddStream(stream_);
-  pc_receiver->AddStream(stream_);
-#endif
-  // 2.使用AddTransceiver添加媒体
-
-  std::vector<std::string> stream_ids({"Test"});
-  libwebrtc::scoped_refptr<libwebrtc::RTCRtpEncodingParameters> encoding =
-      RTCRtpEncodingParameters::Create();
-
-  encoding->set_active(true);
-  encoding->set_max_bitrate_bps(500000);
-  encoding->set_min_bitrate_bps(300000);
-  encoding->set_max_framerate(15);  
-  encoding->set_scale_resolution_down_by(1.0);
-  //encoding->set_rid();
-  //encoding->set_ssrc();
-  //encoding->set_num_temporal_layers();
-  //encoding->set_scale_resolution_down_by();
-  std::vector<scoped_refptr<RTCRtpEncodingParameters>> encodings;
-  encodings.push_back(encoding);
-  auto init=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids,encodings);
-  auto trans = pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),init);
-  pc_sender->AddTransceiver(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
-  // auto trans = pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"));  
-  //pc_receiver->AddTransceiver(RTCMediaType::VIDEO);
-  pc_receiver->AddTransceiver(RTCMediaType::VIDEO);
-  pc_receiver->AddTransceiver(RTCMediaType::AUDIO);
-  // 3.使用AddTrack方式添加媒体
-#if 0
-  std::vector<std::string> stream_ids({"Test"});
-  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
-  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"),stream_ids);
-  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"),stream_ids);
-  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"),stream_ids);
-  auto v_sender=pc_sender->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),stream_ids);
-  auto param=v_sender->parameters();
-  auto encodings=v_sender->init_send_encodings();
-   std::cout << "==> encodings size:" <<encodings.size() <<std::endl;
-  for (scoped_refptr<RTCRtpEncodingParameters> encoding : encodings.std_vector()) {
-    std::cout << "==> min_bitrate_bps " <<encoding->min_bitrate_bps() <<std::endl;
-    std::cout << "==> max_bitrate_bps " <<encoding->max_bitrate_bps() <<std::endl;
-    std::cout << "==> max_framerate " <<encoding->max_framerate() <<std::endl;
-  }
-  pc_sender->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),stream_ids);
-  pc_receiver->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
-  pc_receiver->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),stream_ids);
-#endif
-
-
- auto trackStats = scoped_refptr<TrackStatsObserverImpl>(
-      new RefCountedObject<TrackStatsObserverImpl>());
-
-  //设置状态回调
-  pc_receiver->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("answer", pc_sender));
-  
-  pc_sender->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("offer", pc_receiver));
-
-  RTCDataChannelInit *dcInit=new RTCDataChannelInit();
-  auto dc=pc_sender->CreateDataChannel("api",dcInit);
-  
-
-
-  std::cout<<std::endl << "=========          BEGIN SWITCH SDP && ICE          ========"<<std::endl<<std::endl;
+  // pc_mc->AddMandatoryConstraint("IceRestart","true");
   string o_sdp,o_type,error;
   string a_sdp,a_type;
   int ret=0;
@@ -415,23 +304,166 @@ int main() {
   if (ret<0){
     printf("+++ pc_receiver\tGetLocalDescription ERR:%s \r\n", error.c_string());
   }else{
-    // printf("+++ pc_receiver\tGetLocalDescription \r\n%s",a_sdp.c_string());
+    printf("+++ pc_receiver\tGetLocalDescription \r\n");
+    //printf("+++ pc_receiver\tGetLocalDescription \r\n%s",a_sdp.c_string());
   }
 
   ret=waitGetDescription(pc_sender,&RTCPeerConnection::GetLocalDescription,o_sdp,o_type,error);
   if (ret<0){
     printf("+++ pc_sender\tGetLocalDescription ERR:%s \r\n", error.c_string());
   }else{
-    // printf("+++ pc_sender\tGetLocalDescription \r\n%s",o_sdp.c_string());
+    printf("+++ pc_sender\tGetLocalDescription \r\n");
+    //printf("+++ pc_sender\tGetLocalDescription \r\n%s",o_sdp.c_string());
+  }
+  return ret;
+}
+
+RTCConfiguration config_;
+int main() {
+  LibWebRTC::Initialize();
+  config_.sdp_semantics = SdpSemantics::kUnifiedPlan;
+  config_.tcp_candidate_policy=TcpCandidatePolicy::kTcpCandidatePolicyDisabled;
+  config_.bundle_policy=BundlePolicy::kBundlePolicyMaxBundle;
+  scoped_refptr<RTCPeerConnectionFactory> pcFactory = LibWebRTC::CreateRTCPeerConnectionFactory();
+  pcFactory->Initialize();
+  //屏幕设备测试
+  auto screen_device_ = pcFactory->GetDesktopDevice();
+  auto video_screen_ = screen_device_->CreateScreenCapturer();
+  auto video_window_ = screen_device_->CreateWindowCapturer();
+
+  //摄像设备测试
+  auto video_device_ = pcFactory->GetVideoDevice();
+  int cnum=video_device_->NumberOfDevices();
+  printf(" Number Of Video Devices %d \r\n", cnum);
+  char deviceNameUTF8[255];
+  char deviceUniqueIdUTF8[255];
+  for(int i=0;i<cnum;i++){
+    video_device_->GetDeviceName(i, deviceNameUTF8, 254, deviceUniqueIdUTF8, 254);
+    printf(" Name Of Video Devices [%s] [%s]\r\n", deviceNameUTF8, deviceUniqueIdUTF8);
   }
 
+  //摄像设备捕获
+  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 640, 480, 30);
+  auto constraints = RTCMediaConstraints::Create();
+  auto video_source_ = pcFactory->CreateVideoSource(video_caputer_, "Test", constraints);
+  // auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
+  // video_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
 
-  // pc_sender->RestartIce();
-  do{
-    std:string msg="Hello World";
-    dc->Send((const uint8_t *)msg.c_string(),msg.size()+1,false);
-    usleep(1000000);
-  }while(true);
+  //音频设备测试
+  auto audio_device_ = pcFactory->GetAudioDevice();
+  int rnum=audio_device_->RecordingDevices();
+  int pnum=audio_device_->PlayoutDevices();
+  printf(" Number Of Audio Recording Devices %d \r\n",rnum);
+  printf(" Number Of Audio Playout Devices %d \r\n", pnum);
+  char name[RTCAudioDevice::kAdmMaxDeviceNameSize];
+  char guid[RTCAudioDevice::kAdmMaxGuidSize];
+  for (int i=0;i<rnum;i++){
+    audio_device_->RecordingDeviceName(i, name, guid);
+    printf(" Name Of Audio Recording Devices [%s] [%s] \r\n", name, guid);
+  }
+  for (int i=0;i<pnum;i++){
+    audio_device_->PlayoutDeviceName(i, name, guid);
+    printf(" Name Of Audio Playout Devices [%s] [%s] \r\n", name, guid);
+  }
+  audio_device_->SetPlayoutDevice(0);
+  audio_device_->SetRecordingDevice(0);
+  //音频设备捕获
+  auto audio_source_ = pcFactory->CreateAudioSource("Test");
+  auto audio_track_ = pcFactory->CreateAudioTrack(audio_source_, "Audio_Test");
+
+  auto pc_mc = RTCMediaConstraints::Create();
+  pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kEnableIPv6,RTCMediaConstraints::kValueFalse);
+  pc_mc->AddOptionalConstraint(RTCMediaConstraints::kEnableIPv6,RTCMediaConstraints::kValueFalse);
+  // pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kIceRestart,"true");
+
+
+  auto pc_sender = pcFactory->Create(config_, pc_mc);
+  auto pc_receiver = pcFactory->Create(config_, pc_mc);
+  RTCDataChannelInit *dcInit=new RTCDataChannelInit();
+  auto dc=pc_sender->CreateDataChannel("api",dcInit);
+  // 1.使用AddStream方式添加媒体(过时)
+#if 0  
+  auto stream_ = pcFactory->CreateStream("Test");
+  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
+  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"));
+  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"));
+  stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"));
+  stream_->AddTrack(video_track_);
+  pc_sender->AddStream(stream_);
+  pc_receiver->AddStream(stream_);
+#endif
+  // 2.使用AddTransceiver添加媒体
+#if 1
+  std::vector<std::string> stream_ids({"Test"});
+  libwebrtc::scoped_refptr<libwebrtc::RTCRtpEncodingParameters> encoding =
+      RTCRtpEncodingParameters::Create();
+
+  encoding->set_active(true);
+  encoding->set_max_bitrate_bps(500000);
+  encoding->set_min_bitrate_bps(300000);
+  encoding->set_max_framerate(15);  
+  encoding->set_scale_resolution_down_by(1.0);
+  //encoding->set_rid();
+  //encoding->set_ssrc();
+  //encoding->set_num_temporal_layers();
+  //encoding->set_scale_resolution_down_by();
+  std::vector<scoped_refptr<RTCRtpEncodingParameters>> encodings;
+  encodings.push_back(encoding);
+  auto init=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids,encodings);
+  pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),init);
+
+ 
+  pc_sender->AddTransceiver(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"));
+
+  // auto trans = pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"));  
+  // pc_receiver->AddTransceiver(RTCMediaType::VIDEO);
+  // pc_receiver->AddTransceiver(RTCMediaType::VIDEO);
+  // pc_receiver->AddTransceiver(RTCMediaType::AUDIO);
+#endif  
+  // 3.使用AddTrack方式添加媒体
+#if 0
+  std::vector<std::string> stream_ids({"Test"});
+  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
+  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"),stream_ids);
+  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"),stream_ids);
+  pc_sender->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"),stream_ids);
+  auto v_sender=pc_sender->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),stream_ids);
+  auto param=v_sender->parameters();
+  auto encodings=v_sender->init_send_encodings();
+   std::cout << "==> encodings size:" <<encodings.size() <<std::endl;
+  for (scoped_refptr<RTCRtpEncodingParameters> encoding : encodings.std_vector()) {
+    std::cout << "==> min_bitrate_bps " <<encoding->min_bitrate_bps() <<std::endl;
+    std::cout << "==> max_bitrate_bps " <<encoding->max_bitrate_bps() <<std::endl;
+    std::cout << "==> max_framerate " <<encoding->max_framerate() <<std::endl;
+  }
+  pc_sender->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),stream_ids);
+  pc_receiver->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
+  pc_receiver->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),stream_ids);
+#endif
+
+
+//  auto trackStats = scoped_refptr<TrackStatsObserverImpl>(
+//       new RefCountedObject<TrackStatsObserverImpl>());
+
+  //设置状态回调
+  pc_receiver->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("answer", pc_receiver,pc_sender));
+  pc_sender  ->RegisterRTCPeerConnectionObserver(new RTCPeerConnectionObserverImpl("offer", pc_sender,pc_receiver));
+
+
+  exchangeDescription(pc_sender,pc_receiver);
+  usleep(1000000);
+
+  std::vector<std::string> stream_ids_1({"Test_1"});
+  auto init1=RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly,stream_ids_1,encodings);
+
+  pc_sender->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),init1);
+  // do{
+  //   printf("+++ Send ChannelData \r\n");
+  //   string msg="Hello World";
+  //   dc->Send((const uint8_t *)msg.c_string(),msg.size()+1,false);
+  //   usleep(1000000);
+  //   //pc_sender->RestartIce();
+  // }while(true);
   getchar();
   pc_sender->Close();
   pc_receiver->Close();
