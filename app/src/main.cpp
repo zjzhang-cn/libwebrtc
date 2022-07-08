@@ -230,7 +230,8 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
     //重新协商
     // 此处使用线程，因为在exchangeDescription方法中会阻塞，并等待CreateOffer的回调
     // 但是由于OnRenegotiationNeeded 也在WebRTC的信号线程中，所以CreateOffer的回调不会返回。
-    new std::thread(exchangeDescription, pc_, other_);
+    auto t=std::thread(exchangeDescription, pc_, other_);
+    t.detach();
   };
 
   virtual void OnTrack(scoped_refptr<RTCRtpTransceiver> transceiver) {
