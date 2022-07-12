@@ -39,5 +39,3 @@ gn args out-release --list=rtc_use_h264
 ```sh
 ninja -C out-debug libwebrtc && ninja -C out-debug libwebrtc
 ```
-
-``

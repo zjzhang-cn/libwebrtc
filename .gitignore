@@ -8,3 +8,7 @@ compile_commands.json
 CTestTestfile.cmake
 /out-debug/
 /out-release/
+.vscode
+app/bin
+app/dependency
+app/obj
