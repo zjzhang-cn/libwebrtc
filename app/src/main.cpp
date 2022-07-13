@@ -5,14 +5,16 @@
  * Description : libwebrtc example
  * License : MIT license.
  **************************************************/
-
+#ifndef WIN32
+#define WIN32
+#endif
 #include <stdio.h>
 #include <condition_variable>
 #include <ctime>
 #include <iostream>
 #include <mutex>
 #include <thread>  // std::thread
-#include "base/scoped_ref_ptr.h"
+
 #include "libwebrtc.h"
 #include "rtc_audio_device.h"
 #include "rtc_media_stream.h"
@@ -24,6 +26,7 @@
 #include "rtc_video_device.h"
 #include "rtc_video_frame.h"
 #include "rtc_video_renderer.h"
+#include "base/scoped_ref_ptr.h"
 #ifdef WIN32
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -138,7 +141,7 @@ class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame
   virtual ~RTCVideoRendererImpl() {}
   virtual void OnFrame(scoped_refptr<RTCVideoFrame> frame) {
     std::time_t t = std::time(nullptr);
-    printf("[%s] Frame %dx%d %lld \t \r", tag_.c_string(), frame->width(), frame->height(), t);
+    printf("[%s] Frame %dx%d %lld \t \r", tag_.c_string(), frame->width(), frame->height(), (long long)t);
     w = frame->width();
     h = frame->height();
   }
@@ -368,10 +371,16 @@ int main() {
   scoped_refptr<RTCPeerConnectionFactory> pcFactory =
       LibWebRTC::CreateRTCPeerConnectionFactory();
   pcFactory->Initialize();
+  auto constraints = RTCMediaConstraints::Create();
+#ifdef WIN32  
   //屏幕设备测试
-  // auto screen_device_ = pcFactory->GetDesktopDevice();
-  // auto video_screen_ = screen_device_->CreateScreenCapturer();
+  auto screen_device_ = pcFactory->GetDesktopDevice();
+  auto video_screen_ = screen_device_->CreateScreenCapturer(0);
   // auto video_window_ = screen_device_->CreateWindowCapturer();
+  auto screen_source_ = pcFactory->CreateDesktopSource(video_screen_, "Test", constraints);
+  // scoped_refptr<RTCVideoTrack> screen_track_ = pcFactory->CreateVideoTrack(screen_source_, "Screen_Test0");
+  // screen_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
+#endif  // WIN32  
 
   //枚举视频设备
   auto video_device_ = pcFactory->GetVideoDevice();
@@ -380,18 +389,14 @@ int main() {
   char deviceNameUTF8[255];
   char deviceUniqueIdUTF8[255];
   for (int i = 0; i < cnum; i++) {
-    video_device_->GetDeviceName(i, deviceNameUTF8, 254, deviceUniqueIdUTF8,
-                                 254);
-    printf(" Name Of Video Devices [%s] [%s]\r\n", deviceNameUTF8,
-           deviceUniqueIdUTF8);
+    video_device_->GetDeviceName(i, deviceNameUTF8, 254, deviceUniqueIdUTF8,254);
+    printf(" Name Of Video Devices [%s] [%s]\r\n", deviceNameUTF8, deviceUniqueIdUTF8);
   }
 
   //创建摄像设备源
   auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 1280, 720, 30);
-  auto constraints = RTCMediaConstraints::Create();
-  auto video_source_ =
-      pcFactory->CreateVideoSource(video_caputer_, "Test", constraints);
-  auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
+  auto video_source_ = pcFactory->CreateVideoSource(video_caputer_, "Test", constraints);
+  // auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
   // video_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
 
   //枚举音频设备
@@ -506,8 +511,10 @@ int main() {
   // pc_offer->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test2"),stream_ids);
   // pc_offer->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"),stream_ids);
   // pc_offer->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"),stream_ids);
-  pc_offer->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"), stream_ids);
-
+  //pc_offer->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"), stream_ids);
+#ifdef WIN32
+ pc_offer->AddTrack(pcFactory->CreateVideoTrack(screen_source_, "SCREEN_Test1"), stream_ids);
+#endif
   // auto v_sender=pc_offer->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),stream_ids);
   // auto param=v_sender->parameters();
   // auto encodings=v_sender->init_send_encodings();
