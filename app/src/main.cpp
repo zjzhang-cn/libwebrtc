@@ -146,13 +146,12 @@ class RTCDataChannelObserverImpl : public RTCDataChannelObserver {
       : dc_(dc) {}
   virtual void OnStateChange(RTCDataChannelState state) {
     std::cout << "Answer RTCDataChannel [" << dc_->label().c_string() << "]OnStateChange :" << state << std::endl;
-  };
+  }
   virtual void OnMessage(const char* buffer, int length, bool binary) {
     auto msg = string(buffer);
     std::cout << "Answer RTCDataChannel[" << dc_->label().c_string() << "]OnMessage [" << buffer << "] len:" << length << std::endl;
     dc_->Send((const uint8_t*)msg.c_string(), msg.size() + 1, false);
-  };
-
+  }
  private:
   scoped_refptr<RTCDataChannel> dc_;
 };
@@ -161,7 +160,7 @@ class TrackStatsObserverImpl : public TrackStatsObserver {
  public:
   void OnComplete(const MediaTrackStatistics& reports) {
     std::cout << "bytes_received " << reports.bytes_received << std::endl;
-  };
+  }
 };
 
 // PeerConnection的回调实现
@@ -172,32 +171,32 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
 
  public:
   RTCPeerConnectionObserverImpl(string tags, scoped_refptr<RTCPeerConnection> pc, scoped_refptr<RTCPeerConnection> other)
-      : pc_(pc), other_(other), tags_(tags){};
+      : pc_(pc), other_(other), tags_(tags){}
   virtual void OnSignalingState(RTCSignalingState state) {
     printf("==%s==>\tOnSignalingState %d\r\n", tags_.c_string(), state);
     fflush(stdout);
-  };
+  }
 
   virtual void OnPeerConnectionState(RTCPeerConnectionState state) {
     printf("==%s==>\tOnPeerConnectionState %d\r\n", tags_.c_string(), state);
     fflush(stdout);
-  };
+  }
 
   virtual void OnIceGatheringState(RTCIceGatheringState state) {
     printf("==%s==>\tOnIceGatheringState %d\r\n", tags_.c_string(), state);
     fflush(stdout);
-  };
+  }
 
   virtual void OnIceConnectionState(RTCIceConnectionState state) {
     printf("==%s==>\tOnIceConnectionState %d\r\n", tags_.c_string(), state);
     fflush(stdout);
-  };
+  }
 
   virtual void OnIceCandidate(scoped_refptr<RTCIceCandidate> candidate) {
     printf("==%s==>\tOnIceCandidate %s\r\n", tags_.c_string(), candidate->candidate().c_string());
     other_->AddCandidate(candidate->sdp_mid(), candidate->sdp_mline_index(), candidate->candidate());
     fflush(stdout);
-  };
+  }
 
   virtual void OnAddStream(scoped_refptr<RTCMediaStream> stream) {
     auto video = stream->video_tracks();
@@ -212,18 +211,18 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
       printf("==%s==>\tOnAddStream RTCAudioTrack %s\r\n", tags_.c_string(), track->id().c_string());
     }
     fflush(stdout);
-  };
+  }
 
   virtual void OnRemoveStream(scoped_refptr<RTCMediaStream> stream) {
     printf("==%s==>OnRemoveStream\r\n", tags_.c_string());
     fflush(stdout);
-  };
+  }
 
   virtual void OnDataChannel(scoped_refptr<RTCDataChannel> data_channel) {
     data_channel->RegisterObserver(new RTCDataChannelObserverImpl(data_channel));
     printf("==%s==>\t OnDataChannel\r\n", tags_.c_string());
     fflush(stdout);
-  };
+  }
 
   virtual void OnRenegotiationNeeded() {
     printf("==%s==>\tOnRenegotiationNeeded\r\n", tags_.c_string());
@@ -232,12 +231,12 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
     // 但是由于OnRenegotiationNeeded 也在WebRTC的信号线程中，所以CreateOffer的回调不会返回。
     auto t=std::thread(exchangeDescription, pc_, other_);
     t.detach();
-  };
+  }
 
   virtual void OnTrack(scoped_refptr<RTCRtpTransceiver> transceiver) {
     printf("==%s==>\tOnTrack mid %s direction %d \r\n", tags_.c_string(), transceiver->mid().c_string(), transceiver->direction());
     fflush(stdout);
-  };
+  }
 
   virtual void OnAddTrack(vector<scoped_refptr<RTCMediaStream>> streams,
                           scoped_refptr<RTCRtpReceiver> receiver) {
@@ -246,12 +245,12 @@ class RTCPeerConnectionObserverImpl : public RTCPeerConnectionObserver {
     if (receiver->track()->kind().std_string() == "video") {
       ((RTCVideoTrack*)track.get())->AddRenderer(new RTCVideoRendererImpl(tags_.std_string() + "\t" + track->id().std_string()));
     }
-  };
+  }
 
   virtual void OnRemoveTrack(scoped_refptr<RTCRtpReceiver> receiver) {
     printf("==%s==>\tOnRemoveTrack\r\n", tags_.c_string());
     fflush(stdout);
-  };
+  }
 };
 
 int exchangeDescription(scoped_refptr<libwebrtc::RTCPeerConnection> pc_sender, scoped_refptr<libwebrtc::RTCPeerConnection> pc_receiver) {
@@ -400,10 +399,10 @@ int main() {
       _(scoped_refptr<RTCDataChannel> dc): dc_(dc) {}
       virtual void OnStateChange(RTCDataChannelState state) {
         std::cout << "Offer RTCDataChannel [" << dc_->label().c_string() << "]OnStateChange:" << state << std::endl;
-      };
+      }
       virtual void OnMessage(const char* buffer, int length, bool binary) {
         std::cout << "Offer RTCDataChannel[" << dc_->label().c_string() << "]OnMessage [" << buffer << "] len:" << length << std::endl;
-      };
+      }
      private:
       scoped_refptr<RTCDataChannel> dc_;
     };
@@ -498,12 +497,12 @@ int main() {
   // pc_offer->RestartIce();
 
   //循环发送DC消息
-  do {
+  // do {
     printf("+++ Send ChannelData \r\n");
     string msg = "Hello World";
     dc->Send((const uint8_t*)msg.c_string(), msg.size() + 1, false);
     usleep(1000000);
-  } while (true);
+  // } while (true);
 
   getchar();
   pc_offer->Close();

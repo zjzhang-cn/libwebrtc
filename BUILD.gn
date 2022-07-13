@@ -217,3 +217,11 @@ rtc_shared_library("libwebrtc"){
   }
 }
 
+
+rtc_executable("libwebrtc-demo") {
+  deps = [ "//libwebrtc:libwebrtc" ]
+  sources = [
+    "app/src/main.cpp"
+  ]
+}
+
