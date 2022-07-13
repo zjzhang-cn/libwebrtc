@@ -142,6 +142,7 @@ class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame
     w = frame->width();
     h = frame->height();
   }
+
  private:
   string tag_;
   int w, h;
@@ -386,7 +387,7 @@ int main() {
   }
 
   //创建摄像设备源
-  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 640, 480, 30);
+  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 1280, 720, 30);
   auto constraints = RTCMediaConstraints::Create();
   auto video_source_ =
       pcFactory->CreateVideoSource(video_caputer_, "Test", constraints);
@@ -550,14 +551,15 @@ int main() {
   pc_offer->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"), stream_ids);
   getchar();
   //发送DC消息
-  // do {
-  printf("+++ Send ChannelData \r\n");
-  string msg = "Hello World";
-  dc->Send((const uint8_t*)msg.c_string(), msg.size() + 1, false);
-  // usleep(1000000);
-  // } while (true);
-
-  getchar();
+  do {
+    printf("+++ Send ChannelData \r\n");
+    string msg = "Hello World";
+    dc->Send((const uint8_t*)msg.c_string(), msg.size() + 1, false);
+    int c=getchar();
+    if (c=='q'){
+      break;
+    }
+  } while (true);
   pc_offer->Close();
   pc_answer->Close();
   printf("Fininsh\r\n");
