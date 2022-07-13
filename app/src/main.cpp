@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <condition_variable>
+#include <ctime>
 #include <iostream>
 #include <mutex>
 #include <thread>  // std::thread
@@ -136,13 +137,11 @@ class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame
   }
   virtual ~RTCVideoRendererImpl() {}
   virtual void OnFrame(scoped_refptr<RTCVideoFrame> frame) {
-    // if (w != frame->width() || h != frame->height()) {
-    printf("[%s] Frame %dx%d\r\n", tag_.c_string(), frame->width(), frame->height());
+    std::time_t t = std::time(nullptr);
+    printf("[%s] Frame %dx%d %lld \t \r", tag_.c_string(), frame->width(), frame->height(), t);
     w = frame->width();
     h = frame->height();
-    //}
   }
-
  private:
   string tag_;
   int w, h;
@@ -459,8 +458,8 @@ int main() {
   stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test3"));
   stream_->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"));
   stream_->AddTrack(video_track_);
-  pc_sender->AddStream(stream_);
-  pc_receiver->AddStream(stream_);
+  pc_offer->AddStream(stream_);
+  pc_answer->AddStream(stream_);
 #endif
   // 2.使用AddTransceiver添加媒体
 #if 0
@@ -533,6 +532,11 @@ int main() {
   //交换SDP
   exchangeDescription(pc_offer, pc_answer);
 
+  //重新协商ICE
+  // for(int i=0;i<5;i++) usleep(1000000);
+  // pc_offer->RestartIce();
+  getchar();
+  //運行中添加媒體，產生協商
   //添加新的的视频Track
 #if 0
   getchar();
@@ -542,14 +546,10 @@ int main() {
   pc_offer->AddTransceiver(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),
                            RTCRtpTransceiverInit::Create(RTCRtpTransceiverDirection::kSendOnly, stream_ids_1, encodings_h));
 #endif
-  //重新协商ICE
-  // for(int i=0;i<5;i++) usleep(1000000);
-  // pc_offer->RestartIce();
+  // std::vector<std::string> stream_ids1({"Test1"});
+  pc_offer->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"), stream_ids);
   getchar();
-  std::vector<std::string> stream_ids1({"Test1"});
-  pc_offer->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"), stream_ids1);
-  getchar();
-  //循环发送DC消息
+  //发送DC消息
   // do {
   printf("+++ Send ChannelData \r\n");
   string msg = "Hello World";
