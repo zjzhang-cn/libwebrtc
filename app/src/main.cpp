@@ -5,9 +5,6 @@
  * Description : libwebrtc example
  * License : MIT license.
  **************************************************/
-#ifndef WIN32
-#define WIN32
-#endif
 #include <stdio.h>
 #include <condition_variable>
 #include <ctime>
