@@ -24,6 +24,9 @@
 #include "rtc_video_device.h"
 #include "rtc_video_frame.h"
 #include "rtc_video_renderer.h"
+#include <termios.h>
+#include <unistd.h>
+#include <curses.h>
 #ifdef WIN32
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -127,25 +130,45 @@ int waitGetDescription(scoped_refptr<RTCPeerConnection> pc,
   c.wait(k, [&] { return resultReady; });
   return ret;
 }
-
+const char *ASCII_LIST = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
 //视频回显的实现
 class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame>> {
  public:
   RTCVideoRendererImpl(string tag)
-      : tag_(tag) {
+      :seq_(0),tag_(tag){
+    initscr();
+    // noecho();        
     printf("[%s] RTCVideoRendererImpl\r\n", tag_.c_string());
   }
   virtual ~RTCVideoRendererImpl() {}
   virtual void OnFrame(scoped_refptr<RTCVideoFrame> frame) {
-    std::time_t t = std::time(nullptr);
-    printf("[%s] Frame %dx%d %lld\r", tag_.c_string(), frame->width(), frame->height(), (long long)t);
-    w = frame->width();
-    h = frame->height();
+    seq_++;
+    if (seq_%10==0){
+      seq_=0;
+      for(int y=0;y<frame->height();y=y+8){
+        for(int x=0;x<frame->width();x=x+4){
+              uint sum=0;
+              for (int y1=0;y1<8;y1++){
+                for (int x1=0;x1<4;x1++){
+                  sum+=frame->DataY()[(y+y1)*frame->StrideY()+(x+x1)];
+                }
+              }
+              mvaddch(y/8,x/4,ASCII_LIST[sum/16/sizeof(ASCII_LIST)]);
+        }
+      }
+      refresh();
+    }
+    //frame->StrideY
+    // std::time_t t = std::time(nullptr);
+    // printf("[%s] Frame %dx%d %lld\r", tag_.c_string(), frame->width(), frame->height(), (long long)t);
+    // w = frame->width();
+    // h = frame->height();
   }
 
  private:
+  int seq_;
   string tag_;
-  int w, h;
+  // int w, h;
 };
 
 // DataChannel的回调实现
@@ -391,7 +414,7 @@ int main() {
   }
 
   //创建摄像设备源
-  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 640, 490, 30);
+  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 640, 320, 30);
   auto video_source_ = pcFactory->CreateVideoSource(video_caputer_, "Test", RTCMediaConstraints::Create());
   // auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
   // video_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
