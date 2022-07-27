@@ -223,6 +223,8 @@ rtc_executable("libwebrtc-demo") {
   sources = [
     "app/src/main.cpp"
   ]
-  libs = [ "ncurses" ]
+  if(!is_win) {  
+    libs = [ "ncurses" ]
+  }
 }
 

@@ -24,9 +24,11 @@
 #include "rtc_video_device.h"
 #include "rtc_video_frame.h"
 #include "rtc_video_renderer.h"
+#ifndef WIN32
 #include <termios.h>
 #include <unistd.h>
 #include <curses.h>
+#endif
 #ifdef WIN32
 #include <winsock2.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -136,27 +138,35 @@ class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame
  public:
   RTCVideoRendererImpl(string tag)
       :seq_(0),tag_(tag){
+#ifndef WIN32
     initscr();
-    // noecho();        
+    // noecho();       
+#endif
     printf("[%s] RTCVideoRendererImpl\r\n", tag_.c_string());
   }
   virtual ~RTCVideoRendererImpl() {}
   virtual void OnFrame(scoped_refptr<RTCVideoFrame> frame) {
     seq_++;
     if (seq_%10==0){
+      printf("[%s] \t\tFrame %dx%d \r", tag_.c_string(), frame->width(),
+             frame->height());
       seq_=0;
       for(int y=0;y<frame->height();y=y+8){
         for(int x=0;x<frame->width();x=x+4){
-              uint sum=0;
+              unsigned int sum=0;
               for (int y1=0;y1<8;y1++){
                 for (int x1=0;x1<4;x1++){
                   sum+=frame->DataY()[(y+y1)*frame->StrideY()+(x+x1)];
                 }
               }
+#ifndef WIN32
               mvaddch(y/8,x/4,ASCII_LIST[sum/16/sizeof(ASCII_LIST)]);
+#endif
         }
       }
+#ifndef WIN32
       refresh();
+#endif
     }
     //frame->StrideY
     // std::time_t t = std::time(nullptr);
@@ -398,8 +408,8 @@ int main() {
   auto video_screen_ = screen_device_->CreateScreenCapturer(0);
   // auto video_window_ = screen_device_->CreateWindowCapturer();
   auto screen_source_ = pcFactory->CreateDesktopSource(video_screen_, "Test", RTCMediaConstraints::Create());
-  // scoped_refptr<RTCVideoTrack> screen_track_ = pcFactory->CreateVideoTrack(screen_source_, "Screen_Test0");
-  // screen_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
+  scoped_refptr<RTCVideoTrack> screen_track_ = pcFactory->CreateVideoTrack(screen_source_, "Screen_Test0");
+  screen_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
 #endif  // WIN32
 
   //枚举视频设备
@@ -528,7 +538,7 @@ int main() {
   // 3.使用AddTrack方式添加媒体
 #if 1
   std::vector<std::string> stream_ids({"Test"});
-  pc_offer->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"), stream_ids);
+  //pc_offer->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"), stream_ids);
 #ifdef WIN32
   std::vector<std::string> stream_ids1({"Test1"});
   pc_offer->AddTrack(pcFactory->CreateVideoTrack(screen_source_, "SCREEN_Test1"), stream_ids1);
