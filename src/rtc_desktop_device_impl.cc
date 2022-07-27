@@ -20,16 +20,18 @@ webrtc::DesktopCaptureOptions RTCDesktopDeviceImpl::CreateOptions() {
 #ifdef _MSC_VER
   options.set_allow_directx_capturer(false);
 #endif
+  //options.set_allow_directx_capturer(true);
   return options;
 }
 
 scoped_refptr<RTCDesktopCapturer> RTCDesktopDeviceImpl::CreateScreenCapturer(uint64_t screen_id) {
   webrtc::DesktopCaptureOptions options = CreateOptions();
-
+  webrtc::DesktopAndCursorComposer* screen_ =
+      new webrtc::DesktopAndCursorComposer(
+          webrtc::DesktopCapturer::CreateScreenCapturer(options), options);
+  screen_->SelectSource(screen_id);
   webrtc::internal::DesktopCapturer* desktop_capturer = new webrtc::internal::DesktopCapturer(
-      std::unique_ptr<webrtc::DesktopCapturer>(new webrtc::DesktopAndCursorComposer(
-			  webrtc::DesktopCapturer::CreateScreenCapturer(options), options))
-  );
+          std::unique_ptr<webrtc::DesktopCapturer>(screen_));
 
   desktop_capturer->Start(cricket::VideoFormat());
   
