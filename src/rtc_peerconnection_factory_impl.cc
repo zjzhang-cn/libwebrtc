@@ -65,7 +65,8 @@ bool RTCPeerConnectionFactoryImpl::Initialize() {
         webrtc::CreateBuiltinAudioDecoderFactory(),
 #if defined(USE_INTEL_MEDIA_SDK)
         CreateIntelVideoEncoderFactory(),
-        webrtc::CreateBuiltinVideoDecoderFactory(),
+        CreateIntelVideoDecoderFactory(),
+        //webrtc::CreateBuiltinVideoDecoderFactory(),
         //CreateIntelVideoDecoderFactory(),//webrtc::CreateBuiltinVideoDecoderFactory(),
 #else
         webrtc::CreateBuiltinVideoEncoderFactory(),

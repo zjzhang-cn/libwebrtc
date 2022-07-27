@@ -237,18 +237,16 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
     m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions);
     m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions2);
   }
-#endif
-  
-  
-  mfxVideoParam m_mfx_enc_params_;
-  memset(&m_mfx_enc_params_, 0, sizeof(m_mfx_enc_params_));
-  m_mfx_enc_params_.mfx.CodecId = MFX_CODEC_AVC;
+#else
+  MSDK_ZERO_MEMORY(m_mfx_enc_params_);
+  m_enc_ext_params_.clear();
+  m_mfx_enc_params_.mfx.CodecId = codec_id;
   m_mfx_enc_params_.mfx.CodecProfile = MFX_PROFILE_AVC_MAIN;    
   m_mfx_enc_params_.mfx.CodecLevel = MFX_LEVEL_AVC_31;
   m_mfx_enc_params_.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
-  m_mfx_enc_params_.mfx.GopPicSize = codec_settings->maxFramerate * 5;
+  m_mfx_enc_params_.mfx.GopPicSize = codec_settings->maxFramerate;
   // //Encoder参数设置：
-  // //禁止B帧
+  // 禁止B帧
   m_mfx_enc_params_.mfx.GopRefDist = 1;
   // 同步模式
   m_mfx_enc_params_.AsyncDepth = 1;
@@ -258,9 +256,10 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
   m_mfx_enc_params_.mfx.NumSlice = 0;
   //IdrInterval指定了IDR帧的间隔，单位为I帧；若IdrInterval=0，则每个I帧均为IDR帧。若IdrInterval=1，则每隔一个I帧为IDR帧
   m_mfx_enc_params_.mfx.IdrInterval = 0;
-  m_mfx_enc_params_.mfx.TargetKbps = codec_settings->maxBitrate/1000;
+  m_mfx_enc_params_.mfx.TargetKbps = codec_settings->maxBitrate;
   m_mfx_enc_params_.mfx.RateControlMethod = MFX_RATECONTROL_VBR;
-  MSDKConvertFrameRate(30, &m_mfx_enc_params_.mfx.FrameInfo.FrameRateExtN,
+  MSDKConvertFrameRate(codec_settings->maxFramerate,
+                       &m_mfx_enc_params_.mfx.FrameInfo.FrameRateExtN,
                        &m_mfx_enc_params_.mfx.FrameInfo.FrameRateExtD);
   m_mfx_enc_params_.mfx.EncodedOrder = 0;                       
   m_mfx_enc_params_.mfx.FrameInfo.FourCC = MFX_FOURCC_NV12;
@@ -290,12 +289,12 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
     m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions);
     m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions2);
   }
-  
+  #endif
   sts=m_pmfx_enc_->Query(&m_mfx_enc_params_, &m_mfx_enc_params_);
-  // if (MFX_ERR_NONE != sts) {
-  //   RTC_LOG(LS_ERROR) << "=== \r\n\r\n  m_pmfx_enc_->Query "<<sts<<"\r\n\r\n";
-  //   return WEBRTC_VIDEO_CODEC_ERROR;
-  // }
+  if (sts<0) {
+     RTC_LOG(LS_ERROR) << "\r\n====[ZHANG]\tm_pmfx_enc_->Query:"<<sts<<"\t===\r\n";
+     return WEBRTC_VIDEO_CODEC_ERROR;
+  }
 #if (MFX_VERSION >= 1025)
   uint32_t timeout = MSDKFactory::Get()->MFETimeout();
   // Do not enable MFE for VP9 at present.
