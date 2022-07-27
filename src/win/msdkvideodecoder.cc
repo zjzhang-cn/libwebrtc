@@ -406,7 +406,14 @@ retry:
                                            webrtc::kVideoRotation_0);
           decoded_frame.set_ntp_time_ms(inputImage.ntp_time_ms_);
           decoded_frame.set_timestamp(inputImage.Timestamp());
-          callback_->Decoded(decoded_frame);
+          if (decoded_frame.video_frame_buffer()->type() ==
+              webrtc::VideoFrameBuffer::Type::kNative) {
+            RTC_LOG(LS_INFO)
+                << "DecodeFrame kNative";
+          } else {
+            callback_->Decoded(decoded_frame);
+          }
+
         }
       }
     } else if (MFX_ERR_MORE_DATA == sts) {
