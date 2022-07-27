@@ -148,7 +148,7 @@ class RTCVideoRendererImpl : public RTCVideoRenderer<scoped_refptr<RTCVideoFrame
   virtual void OnFrame(scoped_refptr<RTCVideoFrame> frame) {
     seq_++;
     if (seq_%10==0){
-      printf("[%s] \t\tFrame %dx%d \r", tag_.c_string(), frame->width(),
+      printf("[%s] \t\tFrame %dx%d \r\n", tag_.c_string(), frame->width(),
              frame->height());
       seq_=0;
       for(int y=0;y<frame->height();y=y+8){
@@ -409,7 +409,7 @@ int main() {
   // auto video_window_ = screen_device_->CreateWindowCapturer();
   auto screen_source_ = pcFactory->CreateDesktopSource(video_screen_, "Test", RTCMediaConstraints::Create());
   scoped_refptr<RTCVideoTrack> screen_track_ = pcFactory->CreateVideoTrack(screen_source_, "Screen_Test0");
-  screen_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
+  //screen_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
 #endif  // WIN32
 
   //枚举视频设备
@@ -424,10 +424,10 @@ int main() {
   }
 
   //创建摄像设备源
-  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 640, 320, 30);
+  auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 640, 480, 30);
   auto video_source_ = pcFactory->CreateVideoSource(video_caputer_, "Test", RTCMediaConstraints::Create());
-  // auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
-  // video_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
+  auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
+  //video_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
 
   //枚举音频设备
   auto audio_device_ = pcFactory->GetAudioDevice();
@@ -538,9 +538,12 @@ int main() {
   // 3.使用AddTrack方式添加媒体
 #if 1
   std::vector<std::string> stream_ids({"Test"});
+
+  //pc_offer->AddTrack(video_track_, stream_ids);
   //pc_offer->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"), stream_ids);
 #ifdef WIN32
   std::vector<std::string> stream_ids1({"Test1"});
+  //pc_offer->AddTrack(screen_track_, stream_ids1);
   pc_offer->AddTrack(pcFactory->CreateVideoTrack(screen_source_, "SCREEN_Test1"), stream_ids1);
 #endif
 
@@ -553,8 +556,8 @@ int main() {
   //   std::cout << "==> max_bitrate_bps " <<encoding->max_bitrate_bps() <<std::endl;
   //   std::cout << "==> max_framerate " <<encoding->max_framerate() <<std::endl;
   // }
-  // pc_answer->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
-  // pc_answer->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"),stream_ids);
+  //pc_answer->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
+  pc_answer->AddTrack(pcFactory->CreateVideoTrack(screen_source_, "SCREEN_Test1"), stream_ids);
 #endif
 
   //  auto trackStats = scoped_refptr<TrackStatsObserverImpl>(new
