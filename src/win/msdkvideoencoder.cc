@@ -190,7 +190,7 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
   m_enc_ext_params_.clear();
   m_mfx_enc_params_.mfx.CodecId = codec_id;
   m_mfx_enc_params_.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
-#if 0
+#if 1
   m_mfx_enc_params_.mfx.RateControlMethod = MFX_RATECONTROL_CQP;
   m_mfx_enc_params_.mfx.QPI = 31;
   m_mfx_enc_params_.mfx.QPP = 31;

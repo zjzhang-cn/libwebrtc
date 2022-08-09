@@ -404,11 +404,11 @@ int main() {
 
 #ifdef WIN32
   //屏幕设备测试
-  auto screen_device_ = pcFactory->GetDesktopDevice();
-  auto video_screen_ = screen_device_->CreateScreenCapturer(0);
+  //auto screen_device_ = pcFactory->GetDesktopDevice();
+  //auto video_screen_ = screen_device_->CreateScreenCapturer(0);
   // auto video_window_ = screen_device_->CreateWindowCapturer();
-  auto screen_source_ = pcFactory->CreateDesktopSource(video_screen_, "Test", RTCMediaConstraints::Create());
-  scoped_refptr<RTCVideoTrack> screen_track_ = pcFactory->CreateVideoTrack(screen_source_, "Screen_Test0");
+  //auto screen_source_ = pcFactory->CreateDesktopSource(video_screen_, "Test", RTCMediaConstraints::Create());
+  //scoped_refptr<RTCVideoTrack> screen_track_ = pcFactory->CreateVideoTrack(screen_source_, "Screen_Test0");
   //screen_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
 #endif  // WIN32
 
@@ -425,6 +425,9 @@ int main() {
 
   //创建摄像设备源
   auto video_caputer_ = video_device_->Create(deviceNameUTF8, 0, 640, 480, 30);
+  if (!video_caputer_) {
+    return 0;
+  }
   auto video_source_ = pcFactory->CreateVideoSource(video_caputer_, "Test", RTCMediaConstraints::Create());
   auto video_track_ = pcFactory->CreateVideoTrack(video_source_, "Video_Test0");
   //video_track_->AddRenderer(new RTCVideoRendererImpl("Local Renderer"));
@@ -445,11 +448,14 @@ int main() {
     audio_device_->PlayoutDeviceName(i, name, guid);
     printf(" Name Of Audio Playout Devices [%s] [%s] \r\n", name, guid);
   }
-  audio_device_->SetPlayoutDevice(0);
-  audio_device_->SetRecordingDevice(0);
+  audio_device_->SetPlayoutDevice(1);
+  audio_device_->SetRecordingDevice(1);
 
   //创建音频设备源
   auto audio_source_ = pcFactory->CreateAudioSource("Test");
+  if (!audio_source_) {
+    return 0;
+  }
   auto audio_track_ = pcFactory->CreateAudioTrack(audio_source_, "Audio_Test");
 
   //创建PC
@@ -461,7 +467,8 @@ int main() {
   // pc_mc->AddMandatoryConstraint(RTCMediaConstraints::kIceRestart,"true");
   auto pc_offer = pcFactory->Create(config_, pc_mc);
   auto pc_answer = pcFactory->Create(config_, pc_mc);
-
+  pc_offer->local_streams();
+  pc_offer->remote_streams();
   //创建DC
   RTCDataChannelInit* dcInit = new RTCDataChannelInit();
   auto dc = pc_offer->CreateDataChannel("api", dcInit);
@@ -540,11 +547,11 @@ int main() {
   std::vector<std::string> stream_ids({"Test"});
 
   //pc_offer->AddTrack(video_track_, stream_ids);
-  //pc_offer->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"), stream_ids);
+  pc_offer->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test1"), stream_ids);
 #ifdef WIN32
   std::vector<std::string> stream_ids1({"Test1"});
   //pc_offer->AddTrack(screen_track_, stream_ids1);
-  pc_offer->AddTrack(pcFactory->CreateVideoTrack(screen_source_, "SCREEN_Test1"), stream_ids1);
+  //pc_offer->AddTrack(pcFactory->CreateVideoTrack(screen_source_, "SCREEN_Test1"), stream_ids1);
 #endif
 
   // auto v_sender=pc_offer->AddTrack(pcFactory->CreateVideoTrack(video_source_, "Video_Test2"),stream_ids);
@@ -557,7 +564,7 @@ int main() {
   //   std::cout << "==> max_framerate " <<encoding->max_framerate() <<std::endl;
   // }
   //pc_answer->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"),stream_ids);
-  pc_answer->AddTrack(pcFactory->CreateVideoTrack(screen_source_, "SCREEN_Test1"), stream_ids);
+  //pc_answer->AddTrack(pcFactory->CreateVideoTrack(screen_source_, "SCREEN_Test1"), stream_ids);
 #endif
 
   //  auto trackStats = scoped_refptr<TrackStatsObserverImpl>(new
@@ -592,7 +599,6 @@ int main() {
   // pc_offer->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test4"),stream_ids);
 
   pc_offer->AddTrack(pcFactory->CreateAudioTrack(audio_source_, "Audio_Test1"), stream_ids);
-  getchar();
   //发送DC消息
   do {
     printf("+++ Send ChannelData \r\n");
@@ -601,6 +607,26 @@ int main() {
     int c = getchar();
     if (c == 'q') {
       break;
+    }
+    switch (c) {
+      case '0': {
+        audio_device_->SetPlayoutDevice(0);
+        break;
+      }
+      case '1': {
+        audio_device_->SetPlayoutDevice(1);
+        break;
+      }
+      case '3': {
+        audio_device_->SetRecordingDevice(0);
+        break;
+      }
+      case '4': {
+        audio_device_->SetRecordingDevice(1);
+        break;
+      }
+      default:
+        break;
     }
   } while (true);
   pc_offer->Close();
