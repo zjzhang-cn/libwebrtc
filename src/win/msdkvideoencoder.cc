@@ -185,30 +185,18 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
   if (m_pmfx_enc_ == nullptr) {
     return WEBRTC_VIDEO_CODEC_ERROR;
   }
+ #if 0
   // Init the encoding params:
   MSDK_ZERO_MEMORY(m_mfx_enc_params_);
   m_enc_ext_params_.clear();
   m_mfx_enc_params_.mfx.CodecId = codec_id;
+
   m_mfx_enc_params_.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
-#if 1
   m_mfx_enc_params_.mfx.RateControlMethod = MFX_RATECONTROL_CQP;
   m_mfx_enc_params_.mfx.QPI = 31;
   m_mfx_enc_params_.mfx.QPP = 31;
-#else
-  //m_mfx_enc_params_.mfx.CodecProfile = MFX_PROFILE_AVC_MAIN;    
-  //m_mfx_enc_params_.mfx.CodecLevel = MFX_LEVEL_AVC_31;
-  //m_mfx_enc_params_.mfx.GopPicSize = codec_settings->maxFramerate;
-  m_mfx_enc_params_.mfx.RateControlMethod = MFX_RATECONTROL_VBR;
-  m_mfx_enc_params_.mfx.TargetKbps = codec_settings->startBitrate;
-  m_mfx_enc_params_.mfx.MaxKbps= codec_settings->maxBitrate;
-#endif
-  // //Encoder参数设置：
-  // 禁止B帧
-  m_mfx_enc_params_.mfx.GopRefDist = 1;
-  //每个视频帧中的切片数； 每个切片包含一个或多个小块行。
-  m_mfx_enc_params_.mfx.NumSlice = 0;
-  // IdrInterval指定了IDR帧的间隔，单位为I帧；若IdrInterval=0，则每个I帧均为IDR帧。若IdrInterval=1，则每隔一个I帧为IDR帧
-  m_mfx_enc_params_.mfx.IdrInterval = 0;
+  
+  //m_mfx_enc_params_.mfx.NumSlice = 0;
   MSDKConvertFrameRate(30, &m_mfx_enc_params_.mfx.FrameInfo.FrameRateExtN,
                        &m_mfx_enc_params_.mfx.FrameInfo.FrameRateExtD);
   m_mfx_enc_params_.mfx.EncodedOrder = 0;
@@ -217,6 +205,7 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
   // Frame info parameters
   m_mfx_enc_params_.mfx.FrameInfo.FourCC = MFX_FOURCC_NV12;
   m_mfx_enc_params_.mfx.FrameInfo.Shift = 0;
+
   // WebRTC will not request for Y410 & Y416 at present for VP9/AV1/HEVC.
   // ChromaFormat needs to be set to MFX_CHROMAFORMAT_YUV444 for that.
   m_mfx_enc_params_.mfx.FrameInfo.ChromaFormat = MFX_CHROMAFORMAT_YUV420;
@@ -229,9 +218,7 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
   m_mfx_enc_params_.mfx.FrameInfo.Width = MSDK_ALIGN16(codec_settings->width);
   m_mfx_enc_params_.mfx.LowPower = MFX_CODINGOPTION_ON;
 
-  // 同步模式
   m_mfx_enc_params_.AsyncDepth = 1;
-  // 帧的引用计数
   m_mfx_enc_params_.mfx.NumRefFrame = 2;
 
   mfxExtCodingOption extendedCodingOptions;
@@ -250,7 +237,59 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
     m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions);
     m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions2);
   }
+#else
+  MSDK_ZERO_MEMORY(m_mfx_enc_params_);
+  m_enc_ext_params_.clear();
+  m_mfx_enc_params_.mfx.CodecId = codec_id;
+  //m_mfx_enc_params_.mfx.CodecProfile = MFX_PROFILE_AVC_MAIN;    
+  //m_mfx_enc_params_.mfx.CodecLevel = MFX_LEVEL_AVC_31;
+  m_mfx_enc_params_.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
+  m_mfx_enc_params_.mfx.GopPicSize = codec_settings->maxFramerate * 5;
+  // //Encoder参数设置：
+  // //禁止B帧
+  m_mfx_enc_params_.mfx.GopRefDist = 1;
+  // 同步模式
+  m_mfx_enc_params_.AsyncDepth = 1;
+  //帧的引用计数
+  m_mfx_enc_params_.mfx.NumRefFrame = 2;
+  //每个视频帧中的切片数； 每个切片包含一个或多个小块行。 
+  m_mfx_enc_params_.mfx.NumSlice = 0;
+  //IdrInterval指定了IDR帧的间隔，单位为I帧；若IdrInterval=0，则每个I帧均为IDR帧。若IdrInterval=1，则每隔一个I帧为IDR帧
+  m_mfx_enc_params_.mfx.IdrInterval = 0;
+  m_mfx_enc_params_.mfx.TargetKbps = 1500;
+  m_mfx_enc_params_.mfx.MaxKbps = 5000;
+  m_mfx_enc_params_.mfx.RateControlMethod = MFX_RATECONTROL_VBR;
+  MSDKConvertFrameRate(30, &m_mfx_enc_params_.mfx.FrameInfo.FrameRateExtN,
+                       &m_mfx_enc_params_.mfx.FrameInfo.FrameRateExtD);
+  m_mfx_enc_params_.mfx.EncodedOrder = 0;                       
+  m_mfx_enc_params_.mfx.FrameInfo.FourCC = MFX_FOURCC_NV12;
+  m_mfx_enc_params_.mfx.FrameInfo.ChromaFormat = MFX_CHROMAFORMAT_YUV420;
+  m_mfx_enc_params_.mfx.FrameInfo.PicStruct = MFX_PICSTRUCT_PROGRESSIVE;
+  m_mfx_enc_params_.mfx.FrameInfo.CropX = 0;
+  m_mfx_enc_params_.mfx.FrameInfo.CropY = 0;
+  m_mfx_enc_params_.mfx.FrameInfo.CropW = codec_settings->width;
+  m_mfx_enc_params_.mfx.FrameInfo.CropH = codec_settings->height;
+  m_mfx_enc_params_.mfx.FrameInfo.Height = MSDK_ALIGN16(codec_settings->height);
+  m_mfx_enc_params_.mfx.FrameInfo.Width = MSDK_ALIGN16(codec_settings->width);
+  m_mfx_enc_params_.IOPattern = MFX_IOPATTERN_IN_SYSTEM_MEMORY;
 
+  mfxExtCodingOption extendedCodingOptions;
+  MSDK_ZERO_MEMORY(extendedCodingOptions);
+  extendedCodingOptions.Header.BufferId = MFX_EXTBUFF_CODING_OPTION;
+  extendedCodingOptions.Header.BufferSz = sizeof(extendedCodingOptions);
+  extendedCodingOptions.AUDelimiter = MFX_CODINGOPTION_OFF;
+  extendedCodingOptions.PicTimingSEI = MFX_CODINGOPTION_OFF;
+  extendedCodingOptions.VuiNalHrdParameters = MFX_CODINGOPTION_OFF;
+  mfxExtCodingOption2 extendedCodingOptions2;
+  MSDK_ZERO_MEMORY(extendedCodingOptions2);
+  extendedCodingOptions2.Header.BufferId = MFX_EXTBUFF_CODING_OPTION2;
+  extendedCodingOptions2.Header.BufferSz = sizeof(extendedCodingOptions2);
+  extendedCodingOptions2.RepeatPPS = MFX_CODINGOPTION_OFF;
+  if (codec_id == MFX_CODEC_AVC || codec_id == MFX_CODEC_HEVC) {
+    m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions);
+    m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions2);
+  }
+#endif
   sts=m_pmfx_enc_->Query(&m_mfx_enc_params_, &m_mfx_enc_params_);
   if ( sts<0) {
      RTC_LOG(LS_ERROR) << "m_pmfx_enc_->Query Error:"<<sts;

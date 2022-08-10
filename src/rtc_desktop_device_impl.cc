@@ -20,7 +20,7 @@ webrtc::DesktopCaptureOptions RTCDesktopDeviceImpl::CreateOptions() {
 #ifdef _MSC_VER
   options.set_allow_directx_capturer(false);
 #endif
-  //options.set_allow_directx_capturer(true);
+  options.set_allow_directx_capturer(true);
   return options;
 }
 
