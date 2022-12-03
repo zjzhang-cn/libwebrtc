@@ -20,6 +20,7 @@
 #ifdef WEBRTC_WIN
 #include "modules/desktop_capture/win/window_capture_utils.h"
 #endif
+#ifdef _JPEGLIB_
 extern "C" {
 #if defined(USE_SYSTEM_LIBJPEG)
 #include <jpeglib.h>
@@ -28,7 +29,7 @@ extern "C" {
 #include "jpeglib.h"  // NOLINT
 #endif
 }
-
+#endif
 #include <iostream>
 #include <fstream>
 
@@ -259,6 +260,7 @@ void MediaSourceImpl::SaveCaptureResult(
         RTC_LOG(LS_ERROR) << "Could not convert input frame to RGB.";
         return;
       }
+#ifdef _JPEGLIB_      
       int quality = 80;
       unsigned char* out_buffer = NULL;
       unsigned long out_size = 0;
@@ -298,6 +300,7 @@ void MediaSourceImpl::SaveCaptureResult(
             , thumbnail_.begin());
 
       free(out_buffer);
+#endif      
   }
 #ifdef WEBRTC_WIN
   __except (filterException(GetExceptionCode(), GetExceptionInformation())) {

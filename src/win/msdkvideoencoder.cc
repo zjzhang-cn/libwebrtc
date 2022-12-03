@@ -185,7 +185,7 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
   if (m_pmfx_enc_ == nullptr) {
     return WEBRTC_VIDEO_CODEC_ERROR;
   }
-
+#if 0
   // Init the encoding params:
   MSDK_ZERO_MEMORY(m_mfx_enc_params_);
   m_enc_ext_params_.clear();
@@ -237,7 +237,68 @@ int MSDKVideoEncoder::InitEncodeOnEncoderThread(
     m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions);
     m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions2);
   }
+#else
+  MSDK_ZERO_MEMORY(m_mfx_enc_params_);
+  m_enc_ext_params_.clear();
+  m_mfx_enc_params_.mfx.CodecId = codec_id;
+  // m_mfx_enc_params_.mfx.CodecProfile = MFX_PROFILE_AVC_MAIN;
+  // m_mfx_enc_params_.mfx.CodecLevel = MFX_LEVEL_AVC_31;
+  m_mfx_enc_params_.mfx.TargetUsage = MFX_TARGETUSAGE_BALANCED;
+  m_mfx_enc_params_.mfx.GopPicSize = codec_settings->maxFramerate * 5;
+  // //Encoder参数设置：
+  // //禁止B帧
+  m_mfx_enc_params_.mfx.GopRefDist = 1;
+  // 同步模式
+  m_mfx_enc_params_.AsyncDepth = 1;
+  //帧的引用计数
+  m_mfx_enc_params_.mfx.NumRefFrame = 2;
+  //每个视频帧中的切片数； 每个切片包含一个或多个小块行。
+  m_mfx_enc_params_.mfx.NumSlice = 0;
+  // IdrInterval指定了IDR帧的间隔，单位为I帧；若IdrInterval=0，则每个I帧均为IDR帧。若IdrInterval=1，则每隔一个I帧为IDR帧
+  m_mfx_enc_params_.mfx.IdrInterval = 0;
 
+  m_mfx_enc_params_.mfx.TargetKbps =
+      codec_settings->minBitrate < 1000 ? 1000 : codec_settings->minBitrate;
+  m_mfx_enc_params_.mfx.MaxKbps =
+      codec_settings->maxBitrate < 3000 ? 3000 : codec_settings->maxBitrate;
+  ;
+  m_mfx_enc_params_.mfx.RateControlMethod = MFX_RATECONTROL_VBR;
+  MSDKConvertFrameRate(30, &m_mfx_enc_params_.mfx.FrameInfo.FrameRateExtN,
+                       &m_mfx_enc_params_.mfx.FrameInfo.FrameRateExtD);
+  m_mfx_enc_params_.mfx.EncodedOrder = 0;
+  m_mfx_enc_params_.mfx.FrameInfo.FourCC = MFX_FOURCC_NV12;
+  m_mfx_enc_params_.mfx.FrameInfo.ChromaFormat = MFX_CHROMAFORMAT_YUV420;
+  m_mfx_enc_params_.mfx.FrameInfo.PicStruct = MFX_PICSTRUCT_PROGRESSIVE;
+  m_mfx_enc_params_.mfx.FrameInfo.CropX = 0;
+  m_mfx_enc_params_.mfx.FrameInfo.CropY = 0;
+  m_mfx_enc_params_.mfx.FrameInfo.CropW = codec_settings->width;
+  m_mfx_enc_params_.mfx.FrameInfo.CropH = codec_settings->height;
+  m_mfx_enc_params_.mfx.FrameInfo.Height = MSDK_ALIGN16(codec_settings->height);
+  m_mfx_enc_params_.mfx.FrameInfo.Width = MSDK_ALIGN16(codec_settings->width);
+  m_mfx_enc_params_.IOPattern = MFX_IOPATTERN_IN_SYSTEM_MEMORY;
+
+  mfxExtCodingOption extendedCodingOptions;
+  MSDK_ZERO_MEMORY(extendedCodingOptions);
+  extendedCodingOptions.Header.BufferId = MFX_EXTBUFF_CODING_OPTION;
+  extendedCodingOptions.Header.BufferSz = sizeof(extendedCodingOptions);
+  extendedCodingOptions.AUDelimiter = MFX_CODINGOPTION_OFF;
+  extendedCodingOptions.PicTimingSEI = MFX_CODINGOPTION_OFF;
+  extendedCodingOptions.VuiNalHrdParameters = MFX_CODINGOPTION_OFF;
+  mfxExtCodingOption2 extendedCodingOptions2;
+  MSDK_ZERO_MEMORY(extendedCodingOptions2);
+  extendedCodingOptions2.Header.BufferId = MFX_EXTBUFF_CODING_OPTION2;
+  extendedCodingOptions2.Header.BufferSz = sizeof(extendedCodingOptions2);
+  extendedCodingOptions2.RepeatPPS = MFX_CODINGOPTION_OFF;
+  if (codec_id == MFX_CODEC_AVC || codec_id == MFX_CODEC_HEVC) {
+    m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions);
+    m_enc_ext_params_.push_back((mfxExtBuffer*)&extendedCodingOptions2);
+  }
+ #endif
+  sts = m_pmfx_enc_->Query(&m_mfx_enc_params_, &m_mfx_enc_params_);
+  if (sts < 0) {
+    RTC_LOG(LS_ERROR) << "m_pmfx_enc_->Query Error:" << sts;
+    return WEBRTC_VIDEO_CODEC_ERROR;
+  }
 #if (MFX_VERSION >= 1025)
   uint32_t timeout = MSDKFactory::Get()->MFETimeout();
   // Do not enable MFE for VP9 at present.
@@ -414,7 +475,7 @@ int MSDKVideoEncoder::Encode(
     return WEBRTC_VIDEO_CODEC_ERROR;
   }
   mfxU16 w, h, pitch;
-  mfxU8* ptr;
+  //mfxU8* ptr;
   if (pInfo.CropH > 0 && pInfo.CropW > 0) {
     w = pInfo.CropW;
     h = pInfo.CropH;
@@ -424,7 +485,7 @@ int MSDKVideoEncoder::Encode(
   }
 
   pitch = pData.Pitch;
-  ptr = pData.Y + pInfo.CropX + pInfo.CropY * pData.Pitch;
+  //ptr = pData.Y + pInfo.CropX + pInfo.CropY * pData.Pitch;
 
   if (MFX_FOURCC_NV12 == pInfo.FourCC) {
     rtc::scoped_refptr<webrtc::I420BufferInterface> buffer(
@@ -622,7 +683,6 @@ webrtc::VideoEncoder::EncoderInfo MSDKVideoEncoder::GetEncoderInfo() const {
   EncoderInfo info;
   info.supports_native_handle = false;
   info.is_hardware_accelerated = true;
-  info.has_internal_source = false;
   info.implementation_name = "IntelMediaSDK";
   // Disable frame-dropper for MSDK.
   info.has_trusted_rate_controller = true;

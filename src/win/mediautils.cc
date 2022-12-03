@@ -53,7 +53,7 @@ AudioCodec MediaUtils::GetAudioCodecFromString(const std::string& codec_name) {
   if (it != audio_codec_names.end()) {
     return it->second;
   }
-  RTC_NOTREACHED();
+  RTC_DCHECK_NOTREACHED();
   return AudioCodec::kUnknown;
 }
 VideoCodec MediaUtils::GetVideoCodecFromString(const std::string& codec_name) {
@@ -61,7 +61,7 @@ VideoCodec MediaUtils::GetVideoCodecFromString(const std::string& codec_name) {
   if (it != video_codec_names.end()) {
     return it->second;
   }
-  RTC_NOTREACHED();
+  RTC_DCHECK_NOTREACHED();
   return VideoCodec::kUnknown;
 }
 std::string MediaUtils::AudioCodecToString(const AudioCodec& audio_codec) {
@@ -72,7 +72,7 @@ std::string MediaUtils::AudioCodecToString(const AudioCodec& audio_codec) {
   if (it != audio_codec_names.end()) {
     return it->first;
   } else {
-    RTC_NOTREACHED();
+    RTC_DCHECK_NOTREACHED();
     return "unknown";
   }
 }
@@ -84,7 +84,7 @@ std::string MediaUtils::VideoCodecToString(const VideoCodec& video_codec) {
   if (it != video_codec_names.end()) {
     return it->first;
   } else {
-    RTC_NOTREACHED();
+    RTC_DCHECK_NOTREACHED();
     return "unknown";
   }
 }

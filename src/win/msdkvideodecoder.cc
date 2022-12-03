@@ -8,7 +8,8 @@
 #include "src/win/d3d11_allocator.h"
 #include "src/win/msdkvideodecoder.h"
 #include "api/scoped_refptr.h"
-
+#include "api/video/i420_buffer.h"
+#include "libyuv/convert.h"
 using namespace rtc;
 
 #define MSDK_BS_INIT_SIZE (1024*1024)
@@ -372,7 +373,25 @@ retry:
         // handle for locking/unlocking purpose.
         m_pmfx_allocator_->GetFrameHDL(dxMemId, (mfxHDL*)&pair);
 
-#if 0
+#if 1
+        mfxFrameData* pData = &pOutputSurface->Data;
+        m_pmfx_allocator_->LockFrame(dxMemId, pData);
+        rtc::scoped_refptr<I420Buffer> i420_buffer =
+            I420Buffer::Create(frame_info.Width, frame_info.Height);
+        libyuv::NV12ToI420(pData->Y, pData->Pitch, pData->UV, pData->Pitch,
+                           i420_buffer->MutableDataY(), i420_buffer->StrideY(),
+                           i420_buffer->MutableDataU(), i420_buffer->StrideU(),
+                           i420_buffer->MutableDataV(), i420_buffer->StrideV(),
+                           frame_info.Width, frame_info.Height);
+        m_pmfx_allocator_->UnlockFrame(dxMemId, pData);
+        if (callback_) {
+          webrtc::VideoFrame decoded_frame(i420_buffer, inputImage.Timestamp(),
+                                           0, webrtc::kVideoRotation_0);
+          decoded_frame.set_ntp_time_ms(inputImage.ntp_time_ms_);
+          decoded_frame.set_timestamp(inputImage.Timestamp());
+          callback_->Decoded(decoded_frame);
+        }
+#else
          rtc::scoped_refptr<webrtc::VideoFrameBuffer> cropped_buffer =
             WrapI420Buffer(frame_info.Width, frame_info.Height,
                            av_frame_->data[kYPlaneIndex],
@@ -385,7 +404,7 @@ retry:
                            // To keep reference alive.
                            [frame_buffer] {});
 
-#endif
+
         if (callback_) {
           surface_handle_->d3d11_device = d3d11_device_.p;
           surface_handle_->texture =
@@ -408,6 +427,7 @@ retry:
           decoded_frame.set_timestamp(inputImage.Timestamp());
           callback_->Decoded(decoded_frame);
         }
+#endif
       }
     } else if (MFX_ERR_MORE_DATA == sts) {
       return WEBRTC_VIDEO_CODEC_OK;
